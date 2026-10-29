@@ -1,6 +1,7 @@
-import { useMemo, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, type ReactNode } from "react";
 import { indentUnit } from "@codemirror/language";
 import { EditorState } from "@codemirror/state";
+import { EditorView } from "@codemirror/view";
 import CodeMirror from "@uiw/react-codemirror";
 import { pseudocodeExtensions } from "../editor/pseudocodeLanguage";
 import {
@@ -12,6 +13,7 @@ import {
 interface EditorPaneProps {
   actions: ReactNode;
   indentSize: number;
+  searchTarget: { id: string; from: number; to: number; sequence: number } | null;
   documents: EditorDocument[];
   activeDocumentId: string;
   onActivateDocument: (id: string) => void;
@@ -36,6 +38,7 @@ function FileIcon() {
 export function EditorPane({
   actions,
   indentSize,
+  searchTarget,
   documents,
   activeDocumentId,
   onActivateDocument,
@@ -43,10 +46,26 @@ export function EditorPane({
   onChange,
   onCursorChange,
 }: EditorPaneProps) {
+  const views = useRef(new Map<string, EditorView>());
   const extensions = useMemo(
     () => [...pseudocodeExtensions, indentUnit.of(" ".repeat(indentSize)), EditorState.tabSize.of(indentSize)],
     [indentSize],
   );
+
+  useEffect(() => {
+    if (!searchTarget || searchTarget.id !== activeDocumentId) return;
+    const view = views.current.get(searchTarget.id);
+    if (!view) return;
+    const from = Math.min(searchTarget.from, view.state.doc.length);
+    const to = Math.min(searchTarget.to, view.state.doc.length);
+    view.dispatch({ selection: { anchor: from, head: to }, effects: EditorView.scrollIntoView(from, { y: "center" }) });
+    view.focus();
+  }, [activeDocumentId, searchTarget]);
+
+  useEffect(() => {
+    const ids = new Set(documents.map((document) => document.id));
+    for (const id of views.current.keys()) if (!ids.has(id)) views.current.delete(id);
+  }, [documents]);
 
   return (
     <section className="editor-pane" aria-label="Pseudocode editor">
@@ -106,6 +125,7 @@ export function EditorPane({
         >
           <CodeMirror
             value={document.content}
+            onCreateEditor={(view) => views.current.set(document.id, view)}
             height="100%"
             theme="dark"
             basicSetup={{

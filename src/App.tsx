@@ -8,6 +8,7 @@ import { InspectorPanel } from "./components/InspectorPanel";
 import { RenameDialog } from "./components/RenameDialog";
 import { RunDialog } from "./components/RunDialog";
 import { StatusBar } from "./components/StatusBar";
+import { Sidebar } from "./components/Sidebar";
 import { Toolbar, ToolbarActions } from "./components/Toolbar";
 import { useDocumentWorkspace } from "./hooks/useDocumentWorkspace";
 import { useInterpreter } from "./hooks/useInterpreter";
@@ -47,6 +48,7 @@ function defaultArgument(parameter: string): string {
 function App() {
   const workspace = useDocumentWorkspace();
   const interpreter = useInterpreter();
+  const [searchTarget, setSearchTarget] = useState<{ id: string; from: number; to: number; sequence: number } | null>(null);
   const [output, setOutput] = useState("");
   const [indentSize, setIndentSize] = useState(() => {
     try {
@@ -325,6 +327,18 @@ function App() {
         onToggleInspector={() => setIsInspectorVisible((visible) => !visible)}
       />
 
+      <div className="workbench">
+        <Sidebar
+          documents={workspace.documents}
+          activeDocumentId={workspace.activeDocumentId}
+          onActivate={workspace.setActiveDocumentId}
+          onNew={workspace.newDocument}
+          onOpen={() => void workspace.openDocuments()}
+          onSearchResult={(id, from, to) => {
+            workspace.setActiveDocumentId(id);
+            setSearchTarget((previous) => ({ id, from, to, sequence: (previous?.sequence ?? 0) + 1 }));
+          }}
+        />
       <main
         className={`workspace${
           isInspectorVisible ? "" : " workspace--inspector-hidden"
@@ -332,6 +346,7 @@ function App() {
       >
         <EditorPane
           indentSize={indentSize}
+          searchTarget={searchTarget}
           actions={
 <ToolbarActions
                     onNew={workspace.newDocument}
@@ -361,6 +376,7 @@ function App() {
           <InspectorPanel output={output} variables={variables} />
         )}
       </main>
+      </div>
 
       <StatusBar
         cursorPosition={cursorPosition}
