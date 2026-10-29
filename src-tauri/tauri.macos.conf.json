@@ -1,0 +1,21 @@
+{
+  "app": {
+    "windows": [
+      {
+        "title": "UNNC AlgoLab",
+        "width": 1200,
+        "height": 760,
+        "minWidth": 800,
+        "minHeight": 520,
+        "transparent": true,
+        "decorations": false,
+        "backgroundColor": [
+          0,
+          0,
+          0,
+          0
+        ]
+      }
+    ]
+  }
+}
