@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
@@ -13,10 +13,10 @@ import { Toolbar, ToolbarActions } from "./components/Toolbar";
 import { useDocumentWorkspace } from "./hooks/useDocumentWorkspace";
 import { useInterpreter } from "./hooks/useInterpreter";
 import {
-  formatDiagnostic,
   getEntryFunction,
   toDiagnostic,
 } from "./interpreter/index.ts";
+import { parseProgram } from "./interpreter/parser.ts";
 import type { InterpreterDiagnostic } from "./interpreter/errors.ts";
 import type { VariableSnapshot } from "./interpreter/runtime.ts";
 import { confirmDiscardWorkspace } from "./services/fileService";
@@ -32,6 +32,7 @@ interface RunConfiguration {
   algorithmName: string;
   parameters: string[];
   defaultCall: string;
+  documentId: string;
 }
 
 function defaultArgument(parameter: string): string {
@@ -50,6 +51,18 @@ function App() {
   const interpreter = useInterpreter();
   const [searchTarget, setSearchTarget] = useState<{ id: string; from: number; to: number; sequence: number } | null>(null);
   const [output, setOutput] = useState("");
+  const [runtimeProblem, setRuntimeProblem] = useState<{ documentId: string; source: string; diagnostic: InterpreterDiagnostic } | null>(null);
+  const [inspectorTab, setInspectorTab] = useState<"problems" | "output">("output");
+  const syntaxProblem = useMemo(() => {
+    if (!workspace.activeDocument.content.trim()) return null;
+    try {
+      parseProgram(workspace.activeDocument.content);
+      return null;
+    } catch (error) {
+      return toDiagnostic(error);
+    }
+  }, [workspace.activeDocument.content]);
+  const currentRuntimeProblem = runtimeProblem?.documentId === workspace.activeDocumentId && runtimeProblem.source === workspace.activeDocument.content ? runtimeProblem.diagnostic : null;
   const [indentSize, setIndentSize] = useState(() => {
     try {
       const saved = Number(localStorage.getItem("unnc-algolab.indentSize"));
@@ -89,15 +102,18 @@ function App() {
       const args = entry.parameters.map(defaultArgument).join(", ");
       setRunConfiguration({
         source: workspace.activeDocument.content,
+        documentId: workspace.activeDocumentId,
         algorithmName: entry.name,
         parameters: entry.parameters,
         defaultCall: `${entry.name}(${args})`,
       });
     } catch (error) {
       setVariables([]);
-      setOutput(formatDiagnostic(toDiagnostic(error)));
+      setRuntimeProblem({ documentId: workspace.activeDocumentId, source: workspace.activeDocument.content, diagnostic: toDiagnostic(error) });
+      setInspectorTab("problems");
+      setIsInspectorVisible(true);
     }
-  }, [interpreter, workspace.activeDocument.content]);
+  }, [interpreter, workspace.activeDocument.content, workspace.activeDocumentId]);
 
   const executeRunConfiguration = useCallback(
     async (call: string) => {
@@ -108,6 +124,9 @@ function App() {
       const source = runConfiguration.source;
       setRunConfiguration(null);
       setVariables([]);
+      setRuntimeProblem(null);
+      setInspectorTab("output");
+      setIsInspectorVisible(true);
       setOutput(`Running ${call}…`);
 
       try {
@@ -120,11 +139,13 @@ function App() {
         setVariables(result.variables);
       } catch (error) {
         const diagnostic = error as InterpreterDiagnostic;
-        setOutput(
-          diagnostic.message === "Execution was stopped."
-            ? "Execution stopped."
-            : formatDiagnostic(diagnostic),
-        );
+        if (diagnostic.message === "Execution was stopped.") {
+          setOutput("Execution stopped.");
+        } else {
+          setOutput("");
+          setRuntimeProblem({ documentId: runConfiguration.documentId, source, diagnostic });
+          setInspectorTab("problems");
+        }
         setVariables([]);
       }
     },
@@ -373,7 +394,7 @@ function App() {
           }}
         />
         {isInspectorVisible && (
-          <InspectorPanel output={output} variables={variables} />
+          <InspectorPanel output={output} variables={variables} problems={syntaxProblem ? [syntaxProblem] : currentRuntimeProblem ? [currentRuntimeProblem] : []} selectedTab={inspectorTab} onSelectTab={setInspectorTab} />
         )}
       </main>
       </div>

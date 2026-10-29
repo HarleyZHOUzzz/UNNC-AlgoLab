@@ -1,9 +1,13 @@
 import type { ReactNode } from "react";
+import { formatDiagnostic, type InterpreterDiagnostic } from "../interpreter/errors.ts";
 import type { VariableSnapshot } from "../interpreter/runtime.ts";
 
 interface InspectorPanelProps {
   output: string;
   variables: VariableSnapshot[];
+  problems: InterpreterDiagnostic[];
+  selectedTab: "problems" | "output";
+  onSelectTab: (tab: "problems" | "output") => void;
 }
 
 interface PanelSectionProps {
@@ -20,18 +24,20 @@ function PanelSection({ title, children }: PanelSectionProps) {
   );
 }
 
-export function InspectorPanel({ output, variables }: InspectorPanelProps) {
+export function InspectorPanel({ output, variables, problems, selectedTab, onSelectTab }: InspectorPanelProps) {
   return (
     <aside className="inspector" aria-label="Program information">
-      <PanelSection title="Output">
-        {output ? (
-          <pre className="output-message" aria-live="polite">
-            {output}
-          </pre>
-        ) : (
-          <p className="empty-state">Run the algorithm to see output.</p>
-        )}
-      </PanelSection>
+      <section className="inspector-section">
+        <div className="inspector-tabs" role="tablist" aria-label="Problems and output">
+          <button type="button" role="tab" aria-selected={selectedTab === "problems"} onClick={() => onSelectTab("problems")}>Problems{problems.length > 0 && <span className="problem-count">{problems.length}</span>}</button>
+          <button type="button" role="tab" aria-selected={selectedTab === "output"} onClick={() => onSelectTab("output")}>Output</button>
+        </div>
+        <div className="inspector-section__content" role="tabpanel" aria-label={selectedTab === "problems" ? "Problems" : "Output"}>
+          {selectedTab === "problems" ? (
+            problems.length ? <div className="problem-list" aria-live="polite">{problems.map((problem, index) => <p key={index}>{formatDiagnostic(problem)}</p>)}</div> : <p className="empty-state">No problems detected in the active file.</p>
+          ) : output ? <pre className="output-message" aria-live="polite">{output}</pre> : <p className="empty-state">Run the algorithm to see output.</p>}
+        </div>
+      </section>
 
       <PanelSection title="Variables">
         <div className="variable-header" aria-hidden="true">
