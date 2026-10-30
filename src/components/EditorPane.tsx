@@ -93,7 +93,7 @@ export function EditorPane({
               title={document.path ?? document.name}
             >
               <FileIcon />
-              <span className="file-tab__name">{document.name}</span>
+              <span className={`file-tab__name${document.path === null ? " file-name--untitled" : ""}`}>{document.name}</span>
               {isDirty && (
                 <span className="file-tab__dirty" aria-label="Unsaved changes">
                   ●

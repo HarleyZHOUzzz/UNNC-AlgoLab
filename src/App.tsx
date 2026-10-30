@@ -50,6 +50,7 @@ function defaultArgument(parameter: string): string {
 }
 
 function App() {
+  const [windowFocused, setWindowFocused] = useState(() => document.hasFocus());
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(() => {
     try {
       return localStorage.getItem("unnc-algolab.autoSave") !== "false";
@@ -102,6 +103,22 @@ function App() {
   const documentsRef = useRef(workspace.documents);
   const editorViews = useRef(new Map<string, EditorView>());
   const quitInProgressRef = useRef(false);
+
+  useEffect(() => {
+    const onFocus = () => setWindowFocused(true);
+    const onBlur = () => setWindowFocused(false);
+    window.addEventListener("focus", onFocus);
+    window.addEventListener("blur", onBlur);
+    const unlisten = isTauri()
+      ? getCurrentWindow().onFocusChanged(({ payload }) => setWindowFocused(payload))
+      : null;
+
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("blur", onBlur);
+      if (unlisten) void unlisten.then((stop) => stop()).catch(() => {});
+    };
+  }, []);
 
   documentsRef.current = workspace.documents;
 
@@ -294,6 +311,9 @@ function App() {
         case "open_file":
           void workspace.openDocuments();
           break;
+        case "open_folder":
+          void workspace.openFolder();
+          break;
         case "save_file":
           void workspace.saveDocument();
           break;
@@ -446,7 +466,7 @@ function App() {
   }, [requestQuit]);
 
   return (
-    <div className="ide-shell">
+    <div className={`ide-shell${windowFocused ? "" : " ide-shell--unfocused"}`}>
       <Toolbar
         isInspectorVisible={isInspectorVisible}
         onOpenCommandCenter={() => setQuickMode("files")}
@@ -459,9 +479,15 @@ function App() {
         <Sidebar
           documents={workspace.documents}
           activeDocumentId={workspace.activeDocumentId}
+          folder={workspace.folder}
+          folderError={workspace.folderError}
           onActivate={workspace.setActiveDocumentId}
           onNew={workspace.newDocument}
           onOpen={() => void workspace.openDocuments()}
+          onOpenFolder={() => void workspace.openFolder()}
+          onOpenFolderFile={(path) => void workspace.openFilePath(path)}
+          onRefreshFolder={() => void workspace.refreshFolder()}
+          onCreateFolder={workspace.createWorkspaceFolder}
           onSearchResult={(id, from, to) => {
             workspace.setActiveDocumentId(id);
             setSearchTarget((previous) => ({ id, from, to, sequence: (previous?.sequence ?? 0) + 1 }));
@@ -530,6 +556,7 @@ function App() {
           commands={[
             { label: "File: New File", action: workspace.newDocument },
             { label: "File: Open File…", action: () => void workspace.openDocuments() },
+            { label: "File: Open Folder…", action: () => void workspace.openFolder() },
             { label: "File: Save", action: () => void workspace.saveDocument() },
             { label: "File: Save As…", action: () => void workspace.saveDocumentAs() },
             { label: "File: Save All", action: () => void workspace.saveAllDocuments() },

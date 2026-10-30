@@ -1,14 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { isTauri } from "@tauri-apps/api/core";
-import { basename } from "@tauri-apps/api/path";
+import { basename, join } from "@tauri-apps/api/path";
 import { DEFAULT_ALGORITHM } from "../constants/editor";
 import {
   confirmCloseAllEditors,
   confirmDiscardChanges,
+  createFolder,
+  listAlgoFolder,
+  readFile,
   renameDocumentFile,
   selectAndReadFiles,
+  selectFolder,
   selectSavePath,
   writeDocument,
+  type OpenedFolder,
 } from "../services/fileService";
 import {
   isDocumentDirty,
@@ -39,8 +44,11 @@ export function useDocumentWorkspace(autoSaveEnabled: boolean) {
     INITIAL_DOCUMENT.id,
   );
   const [status, setStatus] = useState("Ready");
+  const [folder, setFolder] = useState<OpenedFolder | null>(null);
+  const [folderError, setFolderError] = useState<string | null>(null);
   const nextDocumentNumber = useRef(1);
   const autoSaveInFlight = useRef(new Set<string>());
+  const openingPaths = useRef(new Set<string>());
   const [autoSaveError, setAutoSaveError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -143,6 +151,62 @@ export function useDocumentWorkspace(autoSaveEnabled: boolean) {
     }
   }, [activeDocumentId, documents]);
 
+  const openFolder = useCallback(async () => {
+    try {
+      const selected = await selectFolder();
+      if (!selected) return;
+      setFolder(selected);
+      setFolderError(null);
+      setStatus(`Opened folder ${selected.name}`);
+    } catch (error) {
+      setFolderError(`Open folder failed: ${String(error)}`);
+    }
+  }, []);
+
+  const refreshFolder = useCallback(async () => {
+    if (!folder) return;
+    try {
+      const entries = await listAlgoFolder(folder.path);
+      setFolder((current) => current?.path === folder.path ? { ...current, entries } : current);
+      setFolderError(null);
+    } catch (error) {
+      setFolderError(`Refresh failed: ${String(error)}`);
+    }
+  }, [folder]);
+
+  const openFilePath = useCallback(async (path: string) => {
+    const existing = documents.find((document) => document.path === path);
+    if (existing) {
+      setActiveDocumentId(existing.id);
+      return;
+    }
+    if (openingPaths.current.has(path)) return;
+    openingPaths.current.add(path);
+    try {
+      const file = await readFile(path);
+      const document = createDocument(`file-${nextDocumentNumber.current++}-${Date.now()}`, file.name, file.content, file.path);
+      setDocuments((current) => [...current, document]);
+      setActiveDocumentId(document.id);
+      setFolderError(null);
+      setStatus(`Opened ${file.name}`);
+    } catch (error) {
+      setFolderError(`Open file failed: ${String(error)}`);
+    } finally {
+      openingPaths.current.delete(path);
+    }
+  }, [documents]);
+
+  const createWorkspaceFolder = useCallback(async (name: string): Promise<string | null> => {
+    if (!folder) return "Open a folder first.";
+    try {
+      await createFolder(folder.path, name);
+      await refreshFolder();
+      return null;
+    } catch (error) {
+      return `Create folder failed: ${String(error)}`;
+    }
+  }, [folder, refreshFolder]);
+
   const saveDocumentAs = useCallback(
     async (documentId = activeDocumentId): Promise<boolean> => {
       const document = documents.find((item) => item.id === documentId);
@@ -151,7 +215,8 @@ export function useDocumentWorkspace(autoSaveEnabled: boolean) {
       }
 
       try {
-        const path = await selectSavePath(document.name);
+        const defaultPath = document.path ?? (folder ? await join(folder.path, document.name) : document.name);
+        const path = await selectSavePath(defaultPath);
         if (!path) {
           return false;
         }
@@ -164,13 +229,14 @@ export function useDocumentWorkspace(autoSaveEnabled: boolean) {
           savedContent: document.content,
         });
         setStatus(`Saved ${name}`);
+        void refreshFolder();
         return true;
       } catch (error) {
         setStatus(`Save failed: ${String(error)}`);
         return false;
       }
     },
-    [activeDocumentId, documents, updateDocument],
+    [activeDocumentId, documents, folder, refreshFolder, updateDocument],
   );
 
   const saveDocument = useCallback(
@@ -324,12 +390,13 @@ export function useDocumentWorkspace(autoSaveEnabled: boolean) {
           : null;
         updateDocument(document.id, { name, path });
         setStatus(`Renamed to ${name}`);
+        void refreshFolder();
         return null;
       } catch (error) {
         return `Rename failed: ${String(error)}`;
       }
     },
-    [documents, updateDocument],
+    [documents, refreshFolder, updateDocument],
   );
 
   return {
@@ -338,11 +405,17 @@ export function useDocumentWorkspace(autoSaveEnabled: boolean) {
     activeDocumentId,
     status,
     autoSaveError,
+    folder,
+    folderError,
     setActiveDocumentId,
     setDocumentContent: (id: string, content: string) =>
       updateDocument(id, { content }),
     newDocument,
     openDocuments,
+    openFolder,
+    openFilePath,
+    refreshFolder,
+    createWorkspaceFolder,
     saveDocument,
     saveDocumentAs,
     saveAllDocuments,

@@ -130,17 +130,13 @@ export function Toolbar({ isInspectorVisible, onToggleInspector, onOpenCommandCe
   return (
     <header className={`toolbar${windowsWindow ? " toolbar--windows" : ""}`} data-tauri-drag-region={windowsWindow ? undefined : ""}>
       {customWindow && macOS && (
-        <div className="mac-window-controls" aria-label="Window controls">
-          <button className="mac-window-controls__close" type="button" aria-label="Close window" title="Close" onClick={() => void getCurrentWindow().close()}><span aria-hidden="true">×</span></button>
-          <button className="mac-window-controls__minimize" type="button" aria-label="Minimize window" title="Minimize" onClick={() => void getCurrentWindow().minimize()}><span aria-hidden="true">−</span></button>
-          <button className="mac-window-controls__maximize" type="button" aria-label="Maximize or restore window" title="Maximize or restore" onClick={() => void getCurrentWindow().toggleMaximize()}><span aria-hidden="true">+</span></button>
-        </div>
+        <div className="mac-window-controls-spacer" data-tauri-drag-region aria-hidden="true" />
       )}
       {windowsWindow && (
         <nav ref={menusRef} className="titlebar-menus" aria-label="Application menu">
           <img className="titlebar-app-icon" src={appIcon} alt="" />
           {[
-            { label: "File", items: [["New File", "new_file"], ["Open…", "open_file"], ["Save", "save_file"], ["Save As…", "save_as"], ["Save All", "save_all"], ["Rename…", "rename_file"], ["Close Editor", "close_tab"], ["Close All Editors", "close_all_tabs"]] },
+            { label: "File", items: [["New File", "new_file"], ["Open…", "open_file"], ["Open Folder…", "open_folder"], ["Save", "save_file"], ["Save As…", "save_as"], ["Save All", "save_all"], ["Rename…", "rename_file"], ["Close Editor", "close_tab"], ["Close All Editors", "close_all_tabs"]] },
             { label: "Edit", items: [["Undo", "undo"], ["Redo", "redo"]] },
             { label: "Selection", items: [["Select All", "select_all"]] },
             { label: "View", items: [["Search Files and Commands", "quick_open"], ["Toggle Output and Variables", "toggle_inspector"]] },

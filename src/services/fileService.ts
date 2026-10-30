@@ -13,6 +13,41 @@ export interface OpenedFile {
   content: string;
 }
 
+export interface FolderEntry {
+  name: string;
+  path: string;
+  isDirectory: boolean;
+  children: FolderEntry[];
+}
+
+export interface OpenedFolder {
+  name: string;
+  path: string;
+  entries: FolderEntry[];
+}
+
+export async function readFile(path: string): Promise<OpenedFile> {
+  return {
+    name: await basename(path),
+    path,
+    content: await invoke<string>("read_text_file", { path }),
+  };
+}
+
+export async function selectFolder(): Promise<OpenedFolder | null> {
+  const path = await open({ directory: true, multiple: false });
+  if (!path) return null;
+  return { name: await basename(path), path, entries: await listAlgoFolder(path) };
+}
+
+export async function listAlgoFolder(path: string): Promise<FolderEntry[]> {
+  return invoke<FolderEntry[]>("list_algo_folder", { path });
+}
+
+export async function createFolder(parent: string, name: string): Promise<void> {
+  await invoke("create_folder", { parent, name });
+}
+
 export async function selectAndReadFiles(): Promise<OpenedFile[]> {
   const selection = await open({
     multiple: true,
@@ -26,11 +61,7 @@ export async function selectAndReadFiles(): Promise<OpenedFile[]> {
 
   const paths = Array.isArray(selection) ? selection : [selection];
   return Promise.all(
-    paths.map(async (path) => ({
-      name: await basename(path),
-      path,
-      content: await invoke<string>("read_text_file", { path }),
-    })),
+    paths.map(readFile),
   );
 }
 
