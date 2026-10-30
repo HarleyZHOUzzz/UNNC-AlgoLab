@@ -48,7 +48,14 @@ function defaultArgument(parameter: string): string {
 }
 
 function App() {
-  const workspace = useDocumentWorkspace();
+  const [autoSaveEnabled, setAutoSaveEnabled] = useState(() => {
+    try {
+      return localStorage.getItem("unnc-algolab.autoSave") !== "false";
+    } catch {
+      return true;
+    }
+  });
+  const workspace = useDocumentWorkspace(autoSaveEnabled);
   const interpreter = useInterpreter();
   const [searchTarget, setSearchTarget] = useState<{ id: string; from: number; to: number; sequence: number } | null>(null);
   const [quickMode, setQuickMode] = useState<"files" | "commands" | "line" | "indent" | "indent-size" | null>(null);
@@ -203,6 +210,18 @@ function App() {
     };
     window.addEventListener("keydown", onKeyDown, true);
     return () => window.removeEventListener("keydown", onKeyDown, true);
+  }, []);
+
+  const toggleAutoSave = useCallback(() => {
+    setAutoSaveEnabled((enabled) => {
+      const next = !enabled;
+      try {
+        localStorage.setItem("unnc-algolab.autoSave", String(next));
+      } catch {
+        // The setting remains available for the current session.
+      }
+      return next;
+    });
   }, []);
 
   const changeIndentSize = useCallback((size: number) => {
@@ -472,6 +491,9 @@ function App() {
       <StatusBar
         cursorPosition={cursorPosition}
         problemCount={problems.length}
+        autoSaveEnabled={autoSaveEnabled}
+        autoSaveError={workspace.autoSaveError}
+        onToggleAutoSave={toggleAutoSave}
         onShowProblems={showProblems}
         indentSize={indentSize}
         onSelectIndentation={() => setQuickMode("indent")}
@@ -496,6 +518,7 @@ function App() {
             { label: "File: Save", action: () => void workspace.saveDocument() },
             { label: "File: Save As…", action: () => void workspace.saveDocumentAs() },
             { label: "File: Save All", action: () => void workspace.saveAllDocuments() },
+            { label: `File: Auto Save ${autoSaveEnabled ? "Off" : "On"}`, action: toggleAutoSave },
             { label: "File: Rename…", action: beginRename },
             { label: "File: Close Editor", action: () => void workspace.closeDocument() },
             { label: "File: Close All Editors", action: () => void workspace.closeAllDocuments() },

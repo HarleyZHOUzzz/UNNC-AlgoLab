@@ -1,4 +1,5 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { isTauri } from "@tauri-apps/api/core";
 import { basename } from "@tauri-apps/api/path";
 import { DEFAULT_ALGORITHM } from "../constants/editor";
 import {
@@ -30,7 +31,7 @@ const INITIAL_DOCUMENT = createDocument(
   DEFAULT_ALGORITHM,
 );
 
-export function useDocumentWorkspace() {
+export function useDocumentWorkspace(autoSaveEnabled: boolean) {
   const [documents, setDocuments] = useState<EditorDocument[]>([
     INITIAL_DOCUMENT,
   ]);
@@ -39,6 +40,30 @@ export function useDocumentWorkspace() {
   );
   const [status, setStatus] = useState("Ready");
   const nextDocumentNumber = useRef(1);
+  const autoSaveInFlight = useRef(new Set<string>());
+  const [autoSaveError, setAutoSaveError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!autoSaveEnabled || !isTauri()) return;
+    const timers = documents.filter((document) => document.path && isDocumentDirty(document) && !autoSaveInFlight.current.has(document.id)).map((document) =>
+      window.setTimeout(async () => {
+        if (!document.path || autoSaveInFlight.current.has(document.id)) return;
+        autoSaveInFlight.current.add(document.id);
+        try {
+          await writeDocument(document.path, document.content);
+          setDocuments((current) => current.map((item) => item.id === document.id && item.path === document.path
+            ? { ...item, savedContent: document.content }
+            : item));
+          setAutoSaveError(null);
+        } catch (error) {
+          setAutoSaveError(`Auto save failed for ${document.name}: ${String(error)}`);
+        } finally {
+          autoSaveInFlight.current.delete(document.id);
+        }
+      }, 1000),
+    );
+    return () => timers.forEach(window.clearTimeout);
+  }, [autoSaveEnabled, documents]);
 
   const activeDocument = useMemo(
     () =>
@@ -312,6 +337,7 @@ export function useDocumentWorkspace() {
     activeDocument,
     activeDocumentId,
     status,
+    autoSaveError,
     setActiveDocumentId,
     setDocumentContent: (id: string, content: string) =>
       updateDocument(id, { content }),

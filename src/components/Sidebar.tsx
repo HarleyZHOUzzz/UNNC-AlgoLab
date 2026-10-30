@@ -46,9 +46,9 @@ export function Sidebar({ documents, activeDocumentId, onActivate, onNew, onOpen
         </button>
       </nav>
       {view && <div className="sidebar-panel">
-        <div className="sidebar-heading">{view === "files" ? "EXPLORER" : "SEARCH"}</div>
+        <div className="sidebar-heading">{view === "files" ? "explorer" : "search"}</div>
         {view === "files" ? <>
-          <div className="sidebar-section-title"><span>OPEN EDITORS</span><div><button type="button" onClick={onNew} aria-label="New file" title="New file">+</button><button type="button" onClick={onOpen} aria-label="Open file" title="Open file">↗</button></div></div>
+          <div className="sidebar-section-title"><span>openEditors</span><div><button type="button" onClick={onNew} aria-label="New file" title="New file">+</button><button type="button" onClick={onOpen} aria-label="Open file" title="Open file">↗</button></div></div>
           <div className="sidebar-list">{documents.map((document) => <button type="button" key={document.id} className={`sidebar-file${document.id === activeDocumentId ? " sidebar-file--active" : ""}`} onClick={() => onActivate(document.id)} title={document.path ?? document.name}><span className="sidebar-file__icon">◇</span><span className="sidebar-file__name">{document.name}</span>{isDocumentDirty(document) && <span aria-label="Unsaved changes">●</span>}</button>)}</div>
           <p className="sidebar-hint">Files currently open in the editor</p>
         </> : <>

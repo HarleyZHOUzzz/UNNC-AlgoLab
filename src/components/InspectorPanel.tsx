@@ -40,7 +40,7 @@ export function InspectorPanel({ output, variables, problems, selectedTab, onSel
         </div>
       </section>
 
-      <PanelSection title="Variables">
+      <PanelSection title="variables">
         <div className="variable-header" aria-hidden="true">
           <span>Name</span>
           <span>Value</span>

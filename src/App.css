@@ -263,9 +263,16 @@ button {
   background: #2a2d2e;
 }
 
-.editor-surface .cm-selectionBackground,
-.editor-surface .cm-content ::selection {
+.editor-surface .cm-selectionBackground {
+  background: #3a3d41 !important;
+}
+
+.editor-surface .cm-focused .cm-selectionBackground {
   background: #264f78 !important;
+}
+
+.editor-surface .cm-selectionMatch {
+  background: #3a3d41;
 }
 
 .editor-surface .cm-focused {
@@ -1395,6 +1402,10 @@ button {
   background: #222222;
 }
 
+.editor-surface .cm-editor:has(.cm-selectionBackground) .cm-activeLine {
+  background: transparent;
+}
+
 .inspector-section,
 .inspector-section__title,
 .variable-header,
@@ -2109,4 +2120,33 @@ button {
 .quick-picker__input {
   display: block;
   line-height: normal;
+}
+
+.sidebar-heading,
+.sidebar-section-title,
+.inspector-section__title {
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.status-autosave {
+  padding: 2px 6px;
+  border: 0;
+  border-radius: 5px;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+
+.status-autosave:hover {
+  background: #37373d;
+}
+
+.status-autosave:focus-visible {
+  outline: 1px solid #80adff;
+}
+
+.status-autosave[title^="Auto save failed"] {
+  color: #f48771;
 }
