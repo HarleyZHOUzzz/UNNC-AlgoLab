@@ -1,5 +1,7 @@
 import { isTauri } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { useEffect, useRef, useState } from "react";
+import appIcon from "../../src-tauri/icons/128x128.png";
 
 interface ToolbarProps {
   onNew: () => void;
@@ -9,10 +11,6 @@ interface ToolbarProps {
   onRun: () => void;
   onStop: () => void;
   isRunning: boolean;
-  onSaveAs: () => void;
-  onSaveAll: () => void;
-  onCloseEditor: () => void;
-  onCloseAll: () => void;
 }
 
 interface ToolbarButtonProps {
@@ -82,17 +80,55 @@ function RunButton({ isRunning, shortcut, onClick }: RunButtonProps) {
   );
 }
 
-export function Toolbar({ isInspectorVisible, onToggleInspector, onOpenCommandCenter }: {
+export function Toolbar({ isInspectorVisible, onToggleInspector, onOpenCommandCenter, onMenuAction, onRequestClose }: {
   isInspectorVisible: boolean;
   onToggleInspector: () => void;
   onOpenCommandCenter: () => void;
+  onMenuAction: (action: string) => void;
+  onRequestClose: () => void;
 }) {
   const macOS = isMacOS();
   const customWindow = isTauri() && (/Windows/.test(navigator.userAgent) || macOS);
   const windowsWindow = customWindow && !macOS;
+  const menusRef = useRef<HTMLElement>(null);
+  const [isMaximized, setIsMaximized] = useState(false);
+
+  useEffect(() => {
+    if (!windowsWindow) return;
+    const window = getCurrentWindow();
+    let disposed = false;
+    const updateMaximized = () => {
+      void window.isMaximized().then((maximized) => {
+        if (!disposed) setIsMaximized(maximized);
+      }).catch(() => {});
+    };
+    updateMaximized();
+    const unlisten = window.onResized(updateMaximized);
+    return () => {
+      disposed = true;
+      void unlisten.then((stop) => stop()).catch(() => {});
+    };
+  }, [windowsWindow]);
+
+  useEffect(() => {
+    if (!windowsWindow) return;
+    const closeMenus = () => menusRef.current?.querySelectorAll("details[open]").forEach((menu) => menu.removeAttribute("open"));
+    const onPointerDown = (event: PointerEvent) => {
+      if (!menusRef.current?.contains(event.target as Node)) closeMenus();
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeMenus();
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [windowsWindow]);
 
   return (
-    <header className="toolbar" data-tauri-drag-region>
+    <header className={`toolbar${windowsWindow ? " toolbar--windows" : ""}`} data-tauri-drag-region={windowsWindow ? undefined : ""}>
       {customWindow && macOS && (
         <div className="mac-window-controls" aria-label="Window controls">
           <button className="mac-window-controls__close" type="button" aria-label="Close window" title="Close" onClick={() => void getCurrentWindow().close()}><span aria-hidden="true">×</span></button>
@@ -100,12 +136,35 @@ export function Toolbar({ isInspectorVisible, onToggleInspector, onOpenCommandCe
           <button className="mac-window-controls__maximize" type="button" aria-label="Maximize or restore window" title="Maximize or restore" onClick={() => void getCurrentWindow().toggleMaximize()}><span aria-hidden="true">+</span></button>
         </div>
       )}
-      <div className="toolbar-drag-region" data-tauri-drag-region />
+      {windowsWindow && (
+        <nav ref={menusRef} className="titlebar-menus" aria-label="Application menu">
+          <img className="titlebar-app-icon" src={appIcon} alt="" />
+          {[
+            { label: "File", items: [["New File", "new_file"], ["Open…", "open_file"], ["Save", "save_file"], ["Save As…", "save_as"], ["Save All", "save_all"], ["Rename…", "rename_file"], ["Close Editor", "close_tab"], ["Close All Editors", "close_all_tabs"]] },
+            { label: "Edit", items: [["Undo", "undo"], ["Redo", "redo"]] },
+            { label: "Selection", items: [["Select All", "select_all"]] },
+            { label: "View", items: [["Search Files and Commands", "quick_open"], ["Toggle Output and Variables", "toggle_inspector"]] },
+          ].map((menu) => (
+            <details className="toolbar-menu" name="titlebar-menu" key={menu.label}>
+              <summary>{menu.label}</summary>
+              <div className="toolbar-menu__items">
+                {menu.items.map(([label, action]) => (
+                  <button type="button" key={action} onClick={(event) => {
+                    event.currentTarget.closest("details")?.removeAttribute("open");
+                    onMenuAction(action);
+                  }}>{label}</button>
+                ))}
+              </div>
+            </details>
+          ))}
+        </nav>
+      )}
+      <div className="toolbar-drag-region" data-tauri-drag-region={windowsWindow ? undefined : ""} />
       <button type="button" className="command-center-trigger" onClick={onOpenCommandCenter} aria-label="Search open files and commands" title={`Quick Open (${macOS ? "⌘P" : "Ctrl+P"})`}>
         <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.5" /><path d="m10.5 10.5 3 3" /></svg>
         <span>Search files and commands</span>
       </button>
-      <div className="toolbar-drag-region" data-tauri-drag-region />
+      <div className="toolbar-drag-region" data-tauri-drag-region={windowsWindow ? undefined : ""} />
       <button
         className="titlebar-panel-button"
         type="button"
@@ -124,10 +183,10 @@ export function Toolbar({ isInspectorVisible, onToggleInspector, onOpenCommandCe
           <button type="button" aria-label="Minimize window" title="Minimize" onClick={() => void getCurrentWindow().minimize()}>
             <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10" /></svg>
           </button>
-          <button type="button" aria-label="Maximize or restore window" title="Maximize or restore" onClick={() => void getCurrentWindow().toggleMaximize()}>
-            <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3.5" y="3.5" width="9" height="9" /></svg>
+          <button type="button" aria-label={isMaximized ? "Restore window" : "Maximize window"} title={isMaximized ? "Restore" : "Maximize"} onClick={() => void getCurrentWindow().toggleMaximize()}>
+            <svg viewBox="0 0 16 16" aria-hidden="true">{isMaximized ? <><path d="M5.5 4.5v-1a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-1" /><rect x="2.5" y="5.5" width="8" height="8" rx="1" /></> : <rect x="3.5" y="3.5" width="9" height="9" rx="1.2" />}</svg>
           </button>
-          <button className="window-controls__close" type="button" aria-label="Close window" title="Close" onClick={() => void getCurrentWindow().close()}>
+          <button className="window-controls__close" type="button" aria-label="Close window" title="Close" onClick={onRequestClose}>
             <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" /></svg>
           </button>
         </div>
@@ -144,35 +203,12 @@ export function ToolbarActions({
   onRun,
   onStop,
   isRunning,
-  onSaveAs,
-  onSaveAll,
-  onCloseEditor,
-  onCloseAll,
 }: ToolbarProps) {
   const macOS = isMacOS();
-  const showFileActions = !macOS || !isTauri();
-  const windowsWindow = isTauri() && /Windows/.test(navigator.userAgent);
+  const showFileActions = !isTauri();
 
   return (
       <nav className="toolbar-actions" aria-label="File and run actions">
-        {windowsWindow && (
-          <details className="toolbar-menu">
-            <summary>File</summary>
-            <div className="toolbar-menu__items">
-              {[
-                ["New File", onNew], ["Open…", onOpen], ["Save", onSave],
-                ["Save As…", onSaveAs], ["Save All", onSaveAll],
-                ["Rename…", onRename], ["Close Editor", onCloseEditor],
-                ["Close All Editors", onCloseAll],
-              ].map(([label, action]) => (
-                <button type="button" key={label as string} onClick={(event) => {
-                  (action as () => void)();
-                  event.currentTarget.closest("details")?.removeAttribute("open");
-                }}>{label as string}</button>
-              ))}
-            </div>
-          </details>
-        )}
         {showFileActions && (
           <>
             <ToolbarButton label="New" icon="new" shortcut={macOS ? "⌘N" : "Ctrl+N"} onClick={onNew} />

@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { redo, selectAll, undo } from "@codemirror/commands";
+import type { EditorView } from "@codemirror/view";
 import "./App.css";
 import { CommandCenter } from "./components/CommandCenter";
 import { EditorPane } from "./components/EditorPane";
@@ -98,6 +100,7 @@ function App() {
   const [isInspectorVisible, setIsInspectorVisible] = useState(true);
   const cursorPositionsRef = useRef<Record<string, CursorPosition>>({});
   const documentsRef = useRef(workspace.documents);
+  const editorViews = useRef(new Map<string, EditorView>());
   const quitInProgressRef = useRef(false);
 
   documentsRef.current = workspace.documents;
@@ -272,6 +275,19 @@ function App() {
   const handleMenuAction = useCallback(
     (action: string) => {
       switch (action) {
+        case "undo":
+        case "redo":
+        case "select_all": {
+          const view = editorViews.current.get(workspace.activeDocumentId);
+          if (view) {
+            ({ undo, redo, select_all: selectAll })[action](view);
+            view.focus();
+          }
+          break;
+        }
+        case "quick_open":
+          setQuickMode("files");
+          break;
         case "new_file":
           workspace.newDocument();
           break;
@@ -435,6 +451,8 @@ function App() {
         isInspectorVisible={isInspectorVisible}
         onOpenCommandCenter={() => setQuickMode("files")}
         onToggleInspector={() => setIsInspectorVisible((visible) => !visible)}
+        onMenuAction={handleMenuAction}
+        onRequestClose={() => void requestQuit()}
       />
 
       <div className="workbench">
@@ -455,6 +473,7 @@ function App() {
         }`}
       >
         <EditorPane
+          views={editorViews}
           indentSize={indentSize}
           searchTarget={searchTarget}
           actions={
@@ -463,10 +482,6 @@ function App() {
                     onOpen={() => void workspace.openDocuments()}
                     onSave={() => void workspace.saveDocument()}
                     onRename={beginRename}
-                    onSaveAs={() => void workspace.saveDocumentAs()}
-                    onSaveAll={() => void workspace.saveAllDocuments()}
-                    onCloseEditor={() => void workspace.closeDocument()}
-                    onCloseAll={() => void workspace.closeAllDocuments()}
                     onRun={handleRun}
                     onStop={interpreter.stop}
                     isRunning={interpreter.isRunning}

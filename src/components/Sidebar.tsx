@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { ChevronDown, ChevronRight, FilePlus2, FileText, Files, FolderOpen, Search } from "lucide-react";
 import { isDocumentDirty, type EditorDocument } from "../types/editor";
 
 type SidebarView = "files" | "search";
@@ -14,6 +15,7 @@ interface SidebarProps {
 
 export function Sidebar({ documents, activeDocumentId, onActivate, onNew, onOpen, onSearchResult }: SidebarProps) {
   const [view, setView] = useState<SidebarView | null>("files");
+  const [editorsExpanded, setEditorsExpanded] = useState(true);
   const [query, setQuery] = useState("");
   const results = useMemo(() => {
     if (!query.trim()) return [];
@@ -39,18 +41,17 @@ export function Sidebar({ documents, activeDocumentId, onActivate, onNew, onOpen
     <aside className="sidebar" aria-label="Sidebar">
       <nav className="activity-bar" aria-label="Sidebar views">
         <button type="button" className={view === "files" ? "activity-button activity-button--active" : "activity-button"} aria-label="Open files" aria-pressed={view === "files"} title="Open files" onClick={() => toggle("files")}>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h8l4 4v13H7zM15 3v4h4M4 7v14h11" /></svg>
+          <Files aria-hidden="true" />
         </button>
         <button type="button" className={view === "search" ? "activity-button activity-button--active" : "activity-button"} aria-label="Search open files" aria-pressed={view === "search"} title="Search open files" onClick={() => toggle("search")}>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6" /><path d="m14.5 14.5 5 5" /></svg>
+          <Search aria-hidden="true" />
         </button>
       </nav>
       {view && <div className="sidebar-panel">
         <div className="sidebar-heading">{view === "files" ? "explorer" : "search"}</div>
         {view === "files" ? <>
-          <div className="sidebar-section-title"><span>openEditors</span><div><button type="button" onClick={onNew} aria-label="New file" title="New file">+</button><button type="button" onClick={onOpen} aria-label="Open file" title="Open file">↗</button></div></div>
-          <div className="sidebar-list">{documents.map((document) => <button type="button" key={document.id} className={`sidebar-file${document.id === activeDocumentId ? " sidebar-file--active" : ""}`} onClick={() => onActivate(document.id)} title={document.path ?? document.name}><span className="sidebar-file__icon">◇</span><span className="sidebar-file__name">{document.name}</span>{isDocumentDirty(document) && <span aria-label="Unsaved changes">●</span>}</button>)}</div>
-          <p className="sidebar-hint">Files currently open in the editor</p>
+          <div className="sidebar-section-title"><button type="button" className="sidebar-section-label" aria-expanded={editorsExpanded} onClick={() => setEditorsExpanded((expanded) => !expanded)}>{editorsExpanded ? <ChevronDown aria-hidden="true" /> : <ChevronRight aria-hidden="true" />}openEditors</button><div className="sidebar-section-actions"><button type="button" onClick={onNew} aria-label="New file" title="New file"><FilePlus2 aria-hidden="true" /></button><button type="button" onClick={onOpen} aria-label="Open file" title="Open file"><FolderOpen aria-hidden="true" /></button></div></div>
+          {editorsExpanded && <div className="sidebar-list">{documents.map((document) => <button type="button" key={document.id} className={`sidebar-file${document.id === activeDocumentId ? " sidebar-file--active" : ""}`} onClick={() => onActivate(document.id)} title={document.path ?? document.name}><FileText className="sidebar-file__icon" aria-hidden="true" /><span className="sidebar-file__name">{document.name}</span>{isDocumentDirty(document) && <span className="sidebar-file__dirty" aria-label="Unsaved changes">●</span>}</button>)}</div>}
         </> : <>
           <div className="sidebar-search"><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search open files" aria-label="Search open files" /></div>
           {query.trim() && <p className="sidebar-hint" aria-live="polite">{results.length} {results.length === 1 ? "result" : "results"} in open files</p>}

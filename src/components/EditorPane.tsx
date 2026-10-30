@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, type ReactNode } from "react";
+import { useEffect, useMemo, type ReactNode, type RefObject } from "react";
 import { indentUnit } from "@codemirror/language";
 import { EditorState } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
@@ -11,6 +11,7 @@ import {
 } from "../types/editor";
 
 interface EditorPaneProps {
+  views: RefObject<Map<string, EditorView>>;
   actions: ReactNode;
   indentSize: number;
   searchTarget: { id: string; from: number; to: number; sequence: number } | null;
@@ -36,6 +37,7 @@ function FileIcon() {
 }
 
 export function EditorPane({
+  views,
   actions,
   indentSize,
   searchTarget,
@@ -46,7 +48,6 @@ export function EditorPane({
   onChange,
   onCursorChange,
 }: EditorPaneProps) {
-  const views = useRef(new Map<string, EditorView>());
   const extensions = useMemo(
     () => [...pseudocodeExtensions, indentUnit.of(" ".repeat(indentSize)), EditorState.tabSize.of(indentSize)],
     [indentSize],
