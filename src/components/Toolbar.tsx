@@ -82,9 +82,10 @@ function RunButton({ isRunning, shortcut, onClick }: RunButtonProps) {
   );
 }
 
-export function Toolbar({ isInspectorVisible, onToggleInspector }: {
+export function Toolbar({ isInspectorVisible, onToggleInspector, onOpenCommandCenter }: {
   isInspectorVisible: boolean;
   onToggleInspector: () => void;
+  onOpenCommandCenter: () => void;
 }) {
   const macOS = isMacOS();
   const customWindow = isTauri() && (/Windows/.test(navigator.userAgent) || macOS);
@@ -99,6 +100,11 @@ export function Toolbar({ isInspectorVisible, onToggleInspector }: {
           <button className="mac-window-controls__maximize" type="button" aria-label="Maximize or restore window" title="Maximize or restore" onClick={() => void getCurrentWindow().toggleMaximize()}><span aria-hidden="true">+</span></button>
         </div>
       )}
+      <div className="toolbar-drag-region" data-tauri-drag-region />
+      <button type="button" className="command-center-trigger" onClick={onOpenCommandCenter} aria-label="Search open files and commands" title={`Quick Open (${macOS ? "⌘P" : "Ctrl+P"})`}>
+        <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.5" /><path d="m10.5 10.5 3 3" /></svg>
+        <span>Search files and commands</span>
+      </button>
       <div className="toolbar-drag-region" data-tauri-drag-region />
       <button
         className="titlebar-panel-button"

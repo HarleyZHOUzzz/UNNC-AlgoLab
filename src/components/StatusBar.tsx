@@ -1,69 +1,28 @@
-import { useEffect, useRef, useState } from "react";
 import type { CursorPosition } from "../types/editor";
 
 interface StatusBarProps {
   cursorPosition: CursorPosition;
-  status: string;
+  problemCount: number;
+  onShowProblems: () => void;
   indentSize: number;
-  onIndentSizeChange: (size: number) => void;
+  onSelectIndentation: () => void;
 }
 
-export function StatusBar({ cursorPosition, status, indentSize, onIndentSizeChange }: StatusBarProps) {
-  const [isIndentMenuOpen, setIsIndentMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    if (!isIndentMenuOpen) return;
-    const onPointerDown = (event: PointerEvent) => {
-      if (!menuRef.current?.contains(event.target as Node)) setIsIndentMenuOpen(false);
-    };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setIsIndentMenuOpen(false);
-        triggerRef.current?.focus();
-      }
-    };
-    document.addEventListener("pointerdown", onPointerDown);
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("pointerdown", onPointerDown);
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, [isIndentMenuOpen]);
-
+export function StatusBar({ cursorPosition, indentSize, onSelectIndentation, problemCount, onShowProblems }: StatusBarProps) {
   return (
     <footer className="status-bar">
       <div className="status-bar__group">
-        <span className="status-indicator" aria-hidden="true" />
-        <span className="status-message" title={status}>
-          {status}
-        </span>
+        <button className="status-problems" type="button" onClick={onShowProblems} aria-label={`${problemCount} errors, show problems`} title="Show Problems">
+          <span aria-hidden="true">⊗</span> {problemCount}
+        </button>
       </div>
       <div className="status-bar__group status-bar__group--right">
         <span>
           Ln {cursorPosition.line}, Col {cursorPosition.column}
         </span>
-        <div className="indent-setting" ref={menuRef}>
-          <button ref={triggerRef} className="indent-setting__trigger" type="button" aria-expanded={isIndentMenuOpen} aria-controls="indent-options" onClick={() => setIsIndentMenuOpen((open) => !open)} title="Change indentation width">
-            Spaces: {indentSize}
-          </button>
-          {isIndentMenuOpen && (
-            <div className="indent-menu" id="indent-options" role="group" aria-label="Indentation width">
-              <div className="indent-menu__title">Indentation width</div>
-              {[2, 4, 8].map((size) => (
-                <button type="button" key={size} aria-pressed={size === indentSize} onClick={() => {
-                  onIndentSizeChange(size);
-                  setIsIndentMenuOpen(false);
-                  triggerRef.current?.focus();
-                }}>
-                  <span>{size} spaces</span>
-                  {size === indentSize && <span aria-hidden="true">✓</span>}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        <button className="indent-setting__trigger" type="button" onClick={onSelectIndentation} title="Select indentation">
+          Spaces: {indentSize}
+        </button>
         <span>UTF-8</span>
         <span>Pseudocode</span>
       </div>

@@ -3,6 +3,7 @@ import { invoke, isTauri } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import "./App.css";
+import { CommandCenter } from "./components/CommandCenter";
 import { EditorPane } from "./components/EditorPane";
 import { InspectorPanel } from "./components/InspectorPanel";
 import { RenameDialog } from "./components/RenameDialog";
@@ -50,19 +51,26 @@ function App() {
   const workspace = useDocumentWorkspace();
   const interpreter = useInterpreter();
   const [searchTarget, setSearchTarget] = useState<{ id: string; from: number; to: number; sequence: number } | null>(null);
+  const [quickMode, setQuickMode] = useState<"files" | "commands" | "line" | "indent" | "indent-size" | null>(null);
   const [output, setOutput] = useState("");
   const [runtimeProblem, setRuntimeProblem] = useState<{ documentId: string; source: string; diagnostic: InterpreterDiagnostic } | null>(null);
   const [inspectorTab, setInspectorTab] = useState<"problems" | "output">("output");
-  const syntaxProblem = useMemo(() => {
-    if (!workspace.activeDocument.content.trim()) return null;
-    try {
-      parseProgram(workspace.activeDocument.content);
-      return null;
-    } catch (error) {
-      return toDiagnostic(error);
+  const problems = useMemo(() => {
+    const found: { documentId: string; name: string; diagnostic: InterpreterDiagnostic }[] = [];
+    for (const document of workspace.documents) {
+      if (!document.content.trim()) continue;
+      try {
+        parseProgram(document.content);
+      } catch (error) {
+        found.push({ documentId: document.id, name: document.name, diagnostic: toDiagnostic(error) });
+      }
     }
-  }, [workspace.activeDocument.content]);
-  const currentRuntimeProblem = runtimeProblem?.documentId === workspace.activeDocumentId && runtimeProblem.source === workspace.activeDocument.content ? runtimeProblem.diagnostic : null;
+    const runtimeDocument = workspace.documents.find((document) => document.id === runtimeProblem?.documentId && document.content === runtimeProblem.source);
+    if (runtimeProblem && runtimeDocument && !found.some((problem) => problem.documentId === runtimeDocument.id)) {
+      found.push({ documentId: runtimeDocument.id, name: runtimeDocument.name, diagnostic: runtimeProblem.diagnostic });
+    }
+    return found;
+  }, [workspace.documents, runtimeProblem]);
   const [indentSize, setIndentSize] = useState(() => {
     try {
       const saved = Number(localStorage.getItem("unnc-algolab.indentSize"));
@@ -151,6 +159,67 @@ function App() {
     },
     [interpreter, runConfiguration],
   );
+
+  const revealProblem = useCallback((problem: { documentId: string; diagnostic: InterpreterDiagnostic }) => {
+    const document = workspace.documents.find((item) => item.id === problem.documentId);
+    if (!document) return;
+    const lines = document.content.split("\n");
+    const lineIndex = Math.min(Math.max(problem.diagnostic.line - 1, 0), lines.length - 1);
+    const lineStart = lines.slice(0, lineIndex).reduce((total, line) => total + line.length + 1, 0);
+    const offset = lineStart + Math.min(Math.max(problem.diagnostic.column - 1, 0), lines[lineIndex].length);
+    workspace.setActiveDocumentId(document.id);
+    setSearchTarget((previous) => ({ id: document.id, from: offset, to: offset, sequence: (previous?.sequence ?? 0) + 1 }));
+  }, [workspace.documents, workspace.setActiveDocumentId]);
+
+  const showProblems = useCallback(() => {
+    setIsInspectorVisible(true);
+    setInspectorTab("problems");
+  }, []);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.key.toLowerCase() === "m") {
+        event.preventDefault();
+        showProblems();
+      } else if (event.key === "F8" && problems.length) {
+        event.preventDefault();
+        const current = problems.findIndex((problem) => problem.documentId === workspace.activeDocumentId && problem.diagnostic.line === cursorPosition.line && problem.diagnostic.column === cursorPosition.column);
+        const next = current < 0 ? (event.shiftKey ? problems.length - 1 : 0) : (current + (event.shiftKey ? -1 : 1) + problems.length) % problems.length;
+        revealProblem(problems[next]);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [problems, revealProblem, showProblems, workspace.activeDocumentId, cursorPosition]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const modifier = event.metaKey || event.ctrlKey;
+      if ((modifier && ["p", "g"].includes(event.key.toLowerCase())) || event.key === "F1") {
+        event.preventDefault();
+        event.stopPropagation();
+        setQuickMode(event.key.toLowerCase() === "g" ? "line" : event.key === "F1" || event.shiftKey ? "commands" : "files");
+      }
+    };
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => window.removeEventListener("keydown", onKeyDown, true);
+  }, []);
+
+  const changeIndentSize = useCallback((size: number) => {
+    setIndentSize(size);
+    try {
+      localStorage.setItem("unnc-algolab.indentSize", String(size));
+    } catch {
+      // The setting remains available for the current session.
+    }
+  }, []);
+
+  const goToLine = useCallback((requestedLine: number) => {
+    const lines = workspace.activeDocument.content.split("\n");
+    const line = Math.min(requestedLine, lines.length);
+    const offset = lines.slice(0, line - 1).reduce((total, text) => total + text.length + 1, 0);
+    setSearchTarget((previous) => ({ id: workspace.activeDocumentId, from: offset, to: offset, sequence: (previous?.sequence ?? 0) + 1 }));
+  }, [workspace.activeDocument.content, workspace.activeDocumentId]);
 
   const beginRename = useCallback(() => {
     setRenameDocumentId(workspace.activeDocumentId);
@@ -345,6 +414,7 @@ function App() {
     <div className="ide-shell">
       <Toolbar
         isInspectorVisible={isInspectorVisible}
+        onOpenCommandCenter={() => setQuickMode("files")}
         onToggleInspector={() => setIsInspectorVisible((visible) => !visible)}
       />
 
@@ -394,24 +464,53 @@ function App() {
           }}
         />
         {isInspectorVisible && (
-          <InspectorPanel output={output} variables={variables} problems={syntaxProblem ? [syntaxProblem] : currentRuntimeProblem ? [currentRuntimeProblem] : []} selectedTab={inspectorTab} onSelectTab={setInspectorTab} />
+          <InspectorPanel output={output} variables={variables} problems={problems} selectedTab={inspectorTab} onSelectTab={setInspectorTab} onRevealProblem={revealProblem} />
         )}
       </main>
       </div>
 
       <StatusBar
         cursorPosition={cursorPosition}
-        status={workspace.status}
+        problemCount={problems.length}
+        onShowProblems={showProblems}
         indentSize={indentSize}
-        onIndentSizeChange={(size) => {
-          setIndentSize(size);
-          try {
-            localStorage.setItem("unnc-algolab.indentSize", String(size));
-          } catch {
-            // The setting remains available for the current session.
-          }
-        }}
+        onSelectIndentation={() => setQuickMode("indent")}
       />
+
+      {quickMode && (
+        <CommandCenter
+          key={quickMode}
+          mode={quickMode}
+          documents={workspace.documents}
+          onOpenFile={workspace.setActiveDocumentId}
+          onGoToLine={goToLine}
+          indentActions={[
+            { label: "Indent Using Spaces", detail: "change view", action: () => setQuickMode("indent-size") },
+            { label: "Trim Trailing Whitespace", detail: "edit file", action: () => workspace.setDocumentContent(workspace.activeDocumentId, workspace.activeDocument.content.replace(/[\t ]+$/gm, "")) },
+          ]}
+          indentSizeActions={[2, 4, 8].map((size) => ({ label: `${size} Spaces${size === indentSize ? "  ✓" : ""}`, action: () => changeIndentSize(size) }))}
+          onClose={() => setQuickMode(null)}
+          commands={[
+            { label: "File: New File", action: workspace.newDocument },
+            { label: "File: Open File…", action: () => void workspace.openDocuments() },
+            { label: "File: Save", action: () => void workspace.saveDocument() },
+            { label: "File: Save As…", action: () => void workspace.saveDocumentAs() },
+            { label: "File: Save All", action: () => void workspace.saveAllDocuments() },
+            { label: "File: Rename…", action: beginRename },
+            { label: "File: Close Editor", action: () => void workspace.closeDocument() },
+            { label: "File: Close All Editors", action: () => void workspace.closeAllDocuments() },
+            { label: "Editor: Go to Line…", action: () => setQuickMode("line") },
+            { label: "Indentation: Select Indentation", action: () => setQuickMode("indent") },
+            { label: "Indentation: 2 Spaces", action: () => changeIndentSize(2) },
+            { label: "Indentation: 4 Spaces", action: () => changeIndentSize(4) },
+            { label: "Indentation: 8 Spaces", action: () => changeIndentSize(8) },
+            { label: "View: Show Problems", action: showProblems },
+            { label: "View: Toggle Inspector", action: () => setIsInspectorVisible((visible) => !visible) },
+            { label: "Run: Run Algorithm…", action: handleRun },
+            { label: "Run: Stop", action: interpreter.stop },
+          ]}
+        />
+      )}
 
       {renameDocument && (
         <RenameDialog

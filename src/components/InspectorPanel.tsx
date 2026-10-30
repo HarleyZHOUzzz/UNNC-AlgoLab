@@ -5,7 +5,8 @@ import type { VariableSnapshot } from "../interpreter/runtime.ts";
 interface InspectorPanelProps {
   output: string;
   variables: VariableSnapshot[];
-  problems: InterpreterDiagnostic[];
+  problems: { documentId: string; name: string; diagnostic: InterpreterDiagnostic }[];
+  onRevealProblem: (problem: { documentId: string; diagnostic: InterpreterDiagnostic }) => void;
   selectedTab: "problems" | "output";
   onSelectTab: (tab: "problems" | "output") => void;
 }
@@ -24,7 +25,7 @@ function PanelSection({ title, children }: PanelSectionProps) {
   );
 }
 
-export function InspectorPanel({ output, variables, problems, selectedTab, onSelectTab }: InspectorPanelProps) {
+export function InspectorPanel({ output, variables, problems, selectedTab, onSelectTab, onRevealProblem }: InspectorPanelProps) {
   return (
     <aside className="inspector" aria-label="Program information">
       <section className="inspector-section">
@@ -34,7 +35,7 @@ export function InspectorPanel({ output, variables, problems, selectedTab, onSel
         </div>
         <div className="inspector-section__content" role="tabpanel" aria-label={selectedTab === "problems" ? "Problems" : "Output"}>
           {selectedTab === "problems" ? (
-            problems.length ? <div className="problem-list" aria-live="polite">{problems.map((problem, index) => <p key={index}>{formatDiagnostic(problem)}</p>)}</div> : <p className="empty-state">No problems detected in the active file.</p>
+            problems.length ? <div className="problem-list" aria-live="polite">{problems.map((problem) => <button type="button" key={problem.documentId} onClick={() => onRevealProblem(problem)}><span className="problem-list__file">{problem.name}</span><span>{formatDiagnostic(problem.diagnostic)}</span></button>)}</div> : <p className="empty-state">No problems detected in open files.</p>
           ) : output ? <pre className="output-message" aria-live="polite">{output}</pre> : <p className="empty-state">Run the algorithm to see output.</p>}
         </div>
       </section>
