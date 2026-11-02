@@ -130,8 +130,28 @@ button {
 
 .editor-surface .cm-scroller {
   overflow: auto;
+  scrollbar-color: #555555 transparent;
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   line-height: 1.75;
+}
+
+.editor-surface .cm-scroller::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.editor-surface .cm-scroller::-webkit-scrollbar-track,
+.editor-surface .cm-scroller::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+.editor-surface .cm-scroller::-webkit-scrollbar-thumb {
+  border-radius: 4px;
+  background: #555555;
+}
+
+.editor-surface .cm-scroller::-webkit-scrollbar-thumb:hover {
+  background: #686868;
 }
 
 .editor-surface .cm-selectionBackground {
