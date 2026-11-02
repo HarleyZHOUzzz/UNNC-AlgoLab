@@ -57,7 +57,7 @@ function FolderTreeItem({ entry, depth, activePath, onOpen, collapseGeneration }
         }}
       >
         {entry.isDirectory
-          ? <><ChevronRight className="sidebar-chevron" aria-hidden="true" />{expanded ? <FolderOpen aria-hidden="true" /> : <Folder aria-hidden="true" />}</>
+          ? <><span className="folder-tree-toggle" aria-hidden="true"><ChevronRight className="sidebar-chevron" /></span><span className="folder-tree-icon" aria-hidden="true"><Folder className="folder-tree-icon__closed" /><FolderOpen className="folder-tree-icon__open" /></span></>
           : <><span className="folder-tree-indent" /><FileText className="file-icon" aria-hidden="true" /></>}
         <span className="folder-tree-name">{entry.name}</span>
       </button>
