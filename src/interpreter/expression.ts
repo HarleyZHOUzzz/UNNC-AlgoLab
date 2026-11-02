@@ -22,6 +22,7 @@ const BINARY_PRECEDENCE: Record<string, number> = {
   "-": 4,
   "*": 5,
   "/": 5,
+  "//": 5,
   mod: 5,
 };
 
@@ -83,7 +84,7 @@ class ExpressionLexer {
     }
 
     const pair = this.source.slice(this.index, this.index + 2);
-    if (["==", "!=", "<>", "<=", ">=", "&&", "||"].includes(pair)) {
+    if (["==", "!=", "<>", "<=", ">=", "&&", "||", "//"].includes(pair)) {
       this.index += 2;
       return {
         kind: "operator",

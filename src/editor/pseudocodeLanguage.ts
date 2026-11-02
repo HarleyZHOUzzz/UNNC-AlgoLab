@@ -58,7 +58,7 @@ const pseudocodeParser: StreamParser<PseudocodeState> = {
     if (stream.eatSpace()) {
       return null;
     }
-    if (stream.match("#") || stream.match("//")) {
+    if (stream.match("#")) {
       stream.skipToEnd();
       return "comment";
     }
@@ -109,7 +109,7 @@ const pseudocodeParser: StreamParser<PseudocodeState> = {
     if (stream.match(/[\p{L}_][\p{L}\p{N}_]*/u)) {
       return "variableName";
     }
-    if (stream.match(/(?:==|!=|<>|<=|>=|&&|\|\||←|[≤≥≠+\-*/%=<>])/)) {
+    if (stream.match(/(?:==|!=|<>|<=|>=|&&|\|\||\/\/|←|[≤≥≠+\-*/%=<>])/)) {
       return "operator";
     }
     if (stream.match(/[()[\],:]/)) {

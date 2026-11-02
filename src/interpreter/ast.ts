@@ -42,6 +42,7 @@ export type Expression =
         | "-"
         | "*"
         | "/"
+        | "//"
         | "mod";
       left: Expression;
       right: Expression;

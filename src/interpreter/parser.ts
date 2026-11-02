@@ -43,7 +43,7 @@ function normalizePunctuation(line: string): string {
       escaped = !escaped && character === "\\";
       continue;
     }
-    if (character === "#" || (character === "/" && line[index + 1] === "/")) {
+    if (character === "#") {
       return normalized + line.slice(index);
     }
     if (character === '"' || character === "'") {
@@ -72,9 +72,6 @@ function removeComment(line: string): string {
       continue;
     }
     if (!quote && character === "#") {
-      return line.slice(0, index);
-    }
-    if (!quote && character === "/" && line[index + 1] === "/") {
       return line.slice(0, index);
     }
   }

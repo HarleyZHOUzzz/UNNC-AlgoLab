@@ -29,6 +29,39 @@ return x + 1`;
   assert.equal(interpret(source, "Main()").result, 7);
 });
 
+test("evaluates floor division with arithmetic precedence and negative values", () => {
+  const run = (expression) => interpret(`Algorithm: Main()\nreturn ${expression}`, "Main()").result;
+  assert.equal(run("7 // 2"), 3);
+  assert.equal(run("-7 // 2"), -4);
+  assert.equal(run("7 // -2"), -4);
+  assert.equal(run("2 + 9 // 2 * 3"), 14);
+  assert.equal(run("7 / 2"), 3.5);
+  assert.throws(() => run("1 // 0"), /Division by zero/);
+});
+
+test("counts ways using floor division without discarding conditions", () => {
+  const source = `Algorithm: CountWays(N)
+return CheckWays(N, 1)
+Sub-Algorithm: CheckWays(N, s)
+let n = FindSqrt(N + (s - 1) * (s - 1), 1)
+if s > (N + 1) // 2 then
+  return 0
+elseif n <= (N + 1) // 2 && n != -1 then
+  return 1 + CheckWays(N, s + 1)
+else
+  return CheckWays(N, s + 1)
+endif
+Sub-Algorithm: FindSqrt(N, s)
+if s * s > N then
+  return -1
+elseif s * s == N then
+  return s
+else
+  return FindSqrt(N, s + 1)
+endif`;
+  assert.equal(interpret(source, "CountWays(45)").result, 3);
+});
+
 test("distinguishes declarations, control keywords, functions, and variables", () => {
   const doc = "Algorithm: Main(n)\nreturn Double(n)";
   const state = EditorState.create({ doc, extensions: pseudocodeExtensions });
@@ -155,7 +188,7 @@ test("rejects Chinese punctuation as syntax", () => {
 test("recognizes comments after strings ending with escaped backslashes", () => {
   const source = String.raw`Algorithm: Main()
 let path = "dir\\" # comment after a literal backslash
-return path // another comment`;
+return path # another comment`;
   assert.equal(interpret(source, "Main()").result, "dir\\");
 });
 

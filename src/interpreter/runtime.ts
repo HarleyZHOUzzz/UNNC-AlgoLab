@@ -314,7 +314,8 @@ class Runtime {
           this.requireNumber(left, expression.location) *
           this.requireNumber(right, expression.location)
         );
-      case "/": {
+      case "/":
+      case "//": {
         const divisor = this.requireNumber(right, expression.location);
         if (divisor === 0) {
           throw new InterpreterError(
@@ -323,7 +324,8 @@ class Runtime {
             expression.location,
           );
         }
-        return this.requireNumber(left, expression.location) / divisor;
+        const result = this.requireNumber(left, expression.location) / divisor;
+        return expression.operator === "//" ? Math.floor(result) : result;
       }
       case "mod": {
         const divisor = this.requireNumber(right, expression.location);
