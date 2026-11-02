@@ -6,6 +6,8 @@
       "nsis": {
         "installMode": "currentUser",
         "installerIcon": "icons/icon.ico",
+        "headerImage": "installer/header.bmp",
+        "sidebarImage": "installer/sidebar.bmp",
         "languages": ["English", "SimpChinese"]
       }
     }
