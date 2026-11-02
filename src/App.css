@@ -135,27 +135,27 @@ button {
   line-height: 1.75;
 }
 
-:is(.editor-surface .cm-scroller, .sidebar-panel, .quick-picker__results) {
+:is(.ide-shell, .ide-shell *) {
   scrollbar-width: thin;
   scrollbar-color: #3d3d3d transparent;
 }
 
-:is(.editor-surface .cm-scroller, .sidebar-panel, .quick-picker__results)::-webkit-scrollbar {
+:is(.ide-shell, .ide-shell *)::-webkit-scrollbar {
   width: 5px;
   height: 5px;
 }
 
-:is(.editor-surface .cm-scroller, .sidebar-panel, .quick-picker__results)::-webkit-scrollbar-track,
-:is(.editor-surface .cm-scroller, .sidebar-panel, .quick-picker__results)::-webkit-scrollbar-corner {
+:is(.ide-shell, .ide-shell *)::-webkit-scrollbar-track,
+:is(.ide-shell, .ide-shell *)::-webkit-scrollbar-corner {
   background: transparent;
 }
 
-:is(.editor-surface .cm-scroller, .sidebar-panel, .quick-picker__results)::-webkit-scrollbar-thumb {
+:is(.ide-shell, .ide-shell *)::-webkit-scrollbar-thumb {
   border-radius: 3px;
   background: #3d3d3d;
 }
 
-:is(.editor-surface .cm-scroller, .sidebar-panel, .quick-picker__results)::-webkit-scrollbar-thumb:hover {
+:is(.ide-shell, .ide-shell *)::-webkit-scrollbar-thumb:hover {
   background: #505050;
 }
 
