@@ -130,6 +130,7 @@ button {
 
 .editor-surface .cm-scroller {
   overflow: auto;
+  overscroll-behavior: none;
   scrollbar-color: #555555 transparent;
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   line-height: 1.75;
