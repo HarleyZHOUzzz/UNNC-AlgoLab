@@ -1,7 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import "@vscode/codicons/dist/codicon.css";
 import {
-  ChevronDown,
   ChevronRight,
   FileText,
   Folder,
@@ -11,6 +10,12 @@ import type { FolderEntry, OpenedFolder } from "../services/fileService";
 import { isDocumentDirty, type EditorDocument } from "../types/editor";
 
 type SidebarView = "files" | "search";
+
+function FolderContents({ expanded, children, root = false }: { expanded: boolean; children: ReactNode; root?: boolean }) {
+  return <div className={`sidebar-collapse${expanded ? " sidebar-collapse--expanded" : ""}${root ? " sidebar-collapse--root" : ""}`} aria-hidden={!expanded} inert={!expanded}>
+    <div className="sidebar-collapse__content">{children}</div>
+  </div>;
+}
 
 interface SidebarProps {
   documents: EditorDocument[];
@@ -52,13 +57,13 @@ function FolderTreeItem({ entry, depth, activePath, onOpen, collapseGeneration }
         }}
       >
         {entry.isDirectory
-          ? <>{expanded ? <ChevronDown aria-hidden="true" /> : <ChevronRight aria-hidden="true" />}{expanded ? <FolderOpen aria-hidden="true" /> : <Folder aria-hidden="true" />}</>
+          ? <><ChevronRight className="sidebar-chevron" aria-hidden="true" />{expanded ? <FolderOpen aria-hidden="true" /> : <Folder aria-hidden="true" />}</>
           : <><span className="folder-tree-indent" /><FileText className="file-icon" aria-hidden="true" /></>}
         <span className="folder-tree-name">{entry.name}</span>
       </button>
-      {entry.isDirectory && expanded && entry.children.map((child) => (
+      {entry.isDirectory && <FolderContents expanded={expanded}>{entry.children.map((child) => (
         <FolderTreeItem key={child.path} entry={child} depth={depth + 1} activePath={activePath} onOpen={onOpen} collapseGeneration={collapseGeneration} />
-      ))}
+      ))}</FolderContents>}
     </>
   );
 }
@@ -131,36 +136,36 @@ export function Sidebar({ documents, activeDocumentId, folder, folderError, onAc
           {!folder && documents.length > 0 && <>
           <div className="sidebar-section-title">
             <button type="button" className="sidebar-section-label" aria-expanded={editorsExpanded} onClick={() => setEditorsExpanded((expanded) => !expanded)}>
-              {editorsExpanded ? <ChevronDown aria-hidden="true" /> : <ChevronRight aria-hidden="true" />}openEditors
+              <ChevronRight className="sidebar-chevron" aria-hidden="true" />openEditors
             </button>
           </div>
-          {editorsExpanded && <div className="sidebar-list">{documents.map((document) => (
+          <FolderContents expanded={editorsExpanded} root><div className="sidebar-list">{documents.map((document) => (
             <button type="button" key={document.id} className={`sidebar-file${document.id === activeDocumentId ? " sidebar-file--active" : ""}`} onClick={(event) => { event.currentTarget.focus(); onActivate(document.id); }} title={document.path ?? document.name}>
               <FileText className="file-icon" aria-hidden="true" />
               <span className={`sidebar-file__name${document.path === null ? " file-name--untitled" : ""}`}>{document.name}</span>
               {isDocumentDirty(document) && <span className="sidebar-file__dirty" aria-label="Unsaved changes">●</span>}
             </button>
-          ))}</div>}
+          ))}</div></FolderContents>
           </>}
           {!folder && <>
             <div className="sidebar-section-title">
               <button type="button" className="sidebar-section-label" aria-expanded={folderExpanded} onClick={() => setFolderExpanded((expanded) => !expanded)}>
-                {folderExpanded ? <ChevronDown aria-hidden="true" /> : <ChevronRight aria-hidden="true" />}No Folder Opened
+                <ChevronRight className="sidebar-chevron" aria-hidden="true" />No Folder Opened
               </button>
             </div>
-            {folderExpanded && <div className="sidebar-empty-folder">
+            <FolderContents expanded={folderExpanded} root><div className="sidebar-empty-folder">
               <p>You have not yet opened a folder.</p>
               <button type="button" onClick={onOpenFolder}>Open Folder</button>
-            </div>}
+            </div></FolderContents>
           </>}
           {folder && <>
             <div className="sidebar-section-title folder-section-title">
               <button type="button" className="sidebar-section-label" aria-expanded={folderExpanded} onClick={() => setFolderExpanded((expanded) => !expanded)} title={folder.path}>
-                {folderExpanded ? <ChevronDown aria-hidden="true" /> : <ChevronRight aria-hidden="true" />}<span className="folder-tree-name">{folder.name}</span>
+                <ChevronRight className="sidebar-chevron" aria-hidden="true" /><span className="folder-tree-name">{folder.name}</span>
               </button>
               {folderActions()}
             </div>
-            {folderExpanded && <div className="sidebar-list folder-tree">
+            <FolderContents expanded={folderExpanded} root><div className="sidebar-list folder-tree">
               {creatingFile && <form className="folder-create" onSubmit={async (event) => {
                 event.preventDefault();
                 if (!newFileName.trim() || creatingFilePending) return;
@@ -202,7 +207,7 @@ export function Sidebar({ documents, activeDocumentId, folder, folderError, onAc
               {folder.entries.length === 0 && !creatingFolder && !creatingFile ? <p className="sidebar-hint">No .algo files</p> : folder.entries.map((entry) => (
                 <FolderTreeItem key={entry.path} entry={entry} depth={0} activePath={activePath} onOpen={onOpenFolderFile} collapseGeneration={collapseGeneration} />
               ))}
-            </div>}
+            </div></FolderContents>
           </>}
           {folderError && <p className="sidebar-error" role="alert">{folderError}</p>}
         </> : <>

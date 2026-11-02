@@ -739,6 +739,37 @@ button {
   margin-top: 8px;
 }
 
+.sidebar-collapse {
+  display: grid;
+  grid-template-rows: 0fr;
+  min-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: grid-template-rows 150ms ease, opacity 120ms ease;
+}
+
+.sidebar-collapse--expanded {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+.sidebar-collapse__content {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.sidebar-collapse--root > .sidebar-collapse__content {
+  overflow: auto;
+}
+
+.sidebar-chevron {
+  transition: transform 150ms ease;
+}
+
+[aria-expanded="true"] > .sidebar-chevron {
+  transform: rotate(90deg);
+}
+
 .folder-section-title .sidebar-section-label {
   flex: 1;
   overflow: hidden;
@@ -2109,6 +2140,10 @@ button {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .sidebar-collapse,
+  .sidebar-chevron {
+    transition: none;
+  }
   .problem-list p {
     animation: none;
   }
