@@ -110,19 +110,17 @@ function App() {
     const workbench = workbenchRef.current;
     if (!workbench) return;
     const sidebar = workbench.querySelector(".sidebar")?.getBoundingClientRect().width ?? 0;
-    const inspector = workbench.querySelector(".inspector")?.getBoundingClientRect().width ?? 0;
+    const inspector = workbench.querySelector(".inspector-container")?.getBoundingClientRect().width ?? 0;
     const available = workbench.clientWidth - sidebar - inspector - 220;
     if (panel === "sidebar") {
       const width = workbench.querySelector(".sidebar-panel")?.getBoundingClientRect().width ?? sidebarWidth;
       if (width + delta <= 180) {
         setIsResizing(false);
-        setSidebarWidth(220);
         setSidebarView(null);
       } else setSidebarWidth(Math.min(width + delta, width + Math.max(0, available)));
     } else {
       if (inspector - delta <= 220) {
         setIsResizing(false);
-        setInspectorWidth(260);
         setIsInspectorVisible(false);
       } else setInspectorWidth(Math.min(inspector - delta, inspector + Math.max(0, available)));
     }

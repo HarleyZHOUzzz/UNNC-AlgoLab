@@ -134,7 +134,8 @@ export function Sidebar({ view, onViewChange, documents, activeDocumentId, folde
           <span className="codicon codicon-search" aria-hidden="true" />
         </button>
       </nav>
-      <div className="sidebar-panel" aria-hidden={!view} inert={!view}>
+      <div className="sidebar-panel-clip" aria-hidden={!view} inert={!view}>
+      <div className="sidebar-panel">
         <div className="sidebar-heading">{displayedView === "files" ? "explorer" : "search"}</div>
         {displayedView === "files" ? <>
           {!folder && documents.length > 0 && <>
@@ -219,6 +220,7 @@ export function Sidebar({ view, onViewChange, documents, activeDocumentId, folde
           {query.trim() && <p className="sidebar-hint" aria-live="polite">{results.length} {results.length === 1 ? "result" : "results"} in open files</p>}
           <div className="sidebar-list">{results.map((result) => <button type="button" className="search-result" key={`${result.id}-${result.from}`} onClick={() => onSearchResult(result.id, result.from, result.to)}><span className="search-result__file">{result.name} <span>Ln {result.line}</span></span><span className="search-result__text">{result.text}</span></button>)}</div>
         </>}
+      </div>
       </div>
     </aside>
   );
