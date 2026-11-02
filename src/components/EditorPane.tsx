@@ -117,7 +117,15 @@ export function EditorPane({
         >
           <CodeMirror
             value={document.content}
-            onCreateEditor={(view) => views.current.set(document.id, view)}
+            onCreateEditor={(view) => {
+              views.current.set(document.id, view);
+              if (searchTarget?.id === document.id) {
+                const from = Math.min(searchTarget.from, view.state.doc.length);
+                const to = Math.min(searchTarget.to, view.state.doc.length);
+                view.dispatch({ selection: { anchor: from, head: to }, effects: EditorView.scrollIntoView(from, { y: "center" }) });
+                view.focus();
+              }
+            }}
             height="100%"
             theme={oneDarkTheme}
             basicSetup={{

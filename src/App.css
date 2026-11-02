@@ -1412,6 +1412,15 @@ button {
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 11px;
+  flex: 0 1 45%;
+}
+
+.quick-picker__results button > span {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .quick-picker__results button[aria-selected="true"] {

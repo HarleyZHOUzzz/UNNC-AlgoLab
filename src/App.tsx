@@ -5,7 +5,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { redo, selectAll, undo } from "@codemirror/commands";
 import type { EditorView } from "@codemirror/view";
 import "./App.css";
-import { CommandCenter } from "./components/CommandCenter";
+import { CommandCenter, type QuickMode } from "./components/CommandCenter";
 import { EditorPane } from "./components/EditorPane";
 import { InspectorPanel } from "./components/InspectorPanel";
 import { RenameDialog } from "./components/RenameDialog";
@@ -61,7 +61,7 @@ function App() {
   const workspace = useDocumentWorkspace(autoSaveEnabled);
   const interpreter = useInterpreter();
   const [searchTarget, setSearchTarget] = useState<{ id: string; from: number; to: number; sequence: number } | null>(null);
-  const [quickMode, setQuickMode] = useState<"files" | "commands" | "line" | "indent" | "indent-size" | null>(null);
+  const [quickMode, setQuickMode] = useState<QuickMode | null>(null);
   const [output, setOutput] = useState("");
   const [runtimeProblem, setRuntimeProblem] = useState<{ documentId: string; source: string; diagnostic: InterpreterDiagnostic } | null>(null);
   const [inspectorTab, setInspectorTab] = useState<"problems" | "output">("output");
@@ -549,7 +549,14 @@ function App() {
           key={quickMode}
           mode={quickMode}
           documents={workspace.documents}
-          onOpenFile={workspace.setActiveDocumentId}
+          activeDocumentId={workspace.activeDocumentId}
+          folder={workspace.folder}
+          onOpenResult={async (file, from, to) => {
+            const id = file.id ?? (file.path ? await workspace.openFilePath(file.path) : null);
+            if (!id) return;
+            workspace.setActiveDocumentId(id);
+            if (from !== undefined) setSearchTarget((previous) => ({ id, from, to: to ?? from, sequence: (previous?.sequence ?? 0) + 1 }));
+          }}
           onGoToLine={goToLine}
           indentActions={[
             { label: "Indent Using Spaces", detail: "change view", action: () => setQuickMode("indent-size") },
@@ -569,6 +576,10 @@ function App() {
             { label: "File: Close Editor", action: () => void workspace.closeDocument() },
             { label: "File: Close All Editors", action: () => void workspace.closeAllDocuments() },
             { label: "Editor: Go to Line…", action: () => setQuickMode("line") },
+            { label: "Search: Find Workspace Files", action: () => setQuickMode("files") },
+            { label: "Search: Go to Algorithm in Current File", action: () => setQuickMode("symbols") },
+            { label: "Search: Go to Algorithm in Workspace", action: () => setQuickMode("workspace-symbols") },
+            { label: "Search: Find Text in Workspace", action: () => setQuickMode("text") },
             { label: "Indentation: Select Indentation", action: () => setQuickMode("indent") },
             { label: "Indentation: 2 Spaces", action: () => changeIndentSize(2) },
             { label: "Indentation: 4 Spaces", action: () => changeIndentSize(4) },

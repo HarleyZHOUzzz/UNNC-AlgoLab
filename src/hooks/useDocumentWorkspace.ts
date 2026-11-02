@@ -211,7 +211,7 @@ export function useDocumentWorkspace(autoSaveEnabled: boolean) {
     const existing = documents.find((document) => document.path === path);
     if (existing) {
       setActiveDocumentId(existing.id);
-      return;
+      return existing.id;
     }
     if (openingPaths.current.has(path)) return;
     openingPaths.current.add(path);
@@ -222,6 +222,7 @@ export function useDocumentWorkspace(autoSaveEnabled: boolean) {
       setActiveDocumentId(document.id);
       setFolderError(null);
       setStatus(`Opened ${file.name}`);
+      return document.id;
     } catch (error) {
       setFolderError(`Open file failed: ${String(error)}`);
     } finally {
