@@ -1537,8 +1537,9 @@ button {
   font-size: 11px;
   cursor: pointer;
   position: absolute;
+  top: 50%;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translate(-50%, -50%);
 }
 
 .toolbar--windows {
@@ -1585,6 +1586,7 @@ button {
 .toolbar--windows .command-center-trigger {
   -webkit-app-region: no-drag;
   position: static;
+  align-self: center;
   flex: 0 1 360px;
   min-width: 80px;
   transform: none;
