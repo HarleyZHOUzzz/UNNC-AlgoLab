@@ -3,6 +3,7 @@
     "windows": [
       {
         "title": "UNNC AlgoLab",
+        "dragDropEnabled": false,
         "width": 1200,
         "height": 760,
         "minWidth": 800,

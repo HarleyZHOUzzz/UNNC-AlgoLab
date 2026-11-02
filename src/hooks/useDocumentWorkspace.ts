@@ -19,6 +19,7 @@ import {
 } from "../services/fileService";
 import {
   isDocumentDirty,
+  reorderDocuments,
   type EditorDocument,
 } from "../types/editor";
 
@@ -446,6 +447,8 @@ export function useDocumentWorkspace(autoSaveEnabled: boolean) {
     openPendingFolder,
     folderError,
     setActiveDocumentId,
+    reorderDocument: (id: string, targetId: string, side: "before" | "after") =>
+      setDocuments((current) => reorderDocuments(current, id, targetId, side)),
     setDocumentContent: (id: string, content: string) =>
       updateDocument(id, { content }),
     newDocument,

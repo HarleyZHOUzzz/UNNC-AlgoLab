@@ -8,6 +8,7 @@
     "build": "tsc && vite build",
     "test:interpreter": "node --experimental-strip-types --test tests/interpreter.test.mjs",
     "test:search": "node --experimental-strip-types --test tests/search.test.mjs",
+    "test:editor": "node --experimental-strip-types --test tests/editor.test.mjs",
     "preview": "vite preview",
     "tauri": "tauri"
   },

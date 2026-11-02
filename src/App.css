@@ -1694,11 +1694,35 @@ button {
   color: #858585;
   background: transparent;
   font-size: 12px;
-  cursor: default;
+  cursor: grab;
   -webkit-user-select: none;
   user-select: none;
   transition: color 60ms ease, background-color 60ms ease;
   gap: 6px;
+}
+
+.file-tab--dragging {
+  opacity: 0.45;
+  cursor: grabbing;
+}
+
+.file-tab__drop-marker {
+  position: absolute;
+  z-index: 3;
+  top: 3px;
+  bottom: 3px;
+  width: 2px;
+  border-radius: 1px;
+  background: var(--accent-blue);
+  pointer-events: none;
+}
+
+.file-tab__drop-marker--before {
+  left: 0;
+}
+
+.file-tab__drop-marker--after {
+  right: 0;
 }
 
 .file-tab > * {

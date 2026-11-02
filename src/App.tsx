@@ -520,6 +520,7 @@ function App() {
           documents={workspace.documents}
           activeDocumentId={workspace.activeDocumentId}
           onActivateDocument={workspace.setActiveDocumentId}
+          onReorderDocument={workspace.reorderDocument}
           onCloseDocument={(id) => void workspace.closeDocument(id)}
           onChange={workspace.setDocumentContent}
           onCursorChange={(position) => {
