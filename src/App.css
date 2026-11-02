@@ -1695,9 +1695,15 @@ button {
   background: transparent;
   font-size: 12px;
   cursor: default;
+  -webkit-user-select: none;
   user-select: none;
   transition: color 60ms ease, background-color 60ms ease;
   gap: 6px;
+}
+
+.file-tab > * {
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .file-tab--active {
