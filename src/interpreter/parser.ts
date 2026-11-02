@@ -202,7 +202,7 @@ class ProgramParser {
         this.index += 1;
       }
 
-      const body = this.parseBlock(new Set(), true);
+      const body = this.parseBlock(new Set());
       functions.push({ ...header, body });
     }
 
@@ -227,12 +227,12 @@ class ProgramParser {
     return { functions };
   }
 
-  private parseBlock(stopWords: Set<string>, stopAtHeader = false): Statement[] {
+  private parseBlock(stopWords: Set<string>): Statement[] {
     const statements: Statement[] = [];
 
     while (!this.atEnd()) {
       const line = this.current();
-      if (stopAtHeader && parseHeader(line)) {
+      if (parseHeader(line)) {
         break;
       }
       const control = controlKeyword(line.text);

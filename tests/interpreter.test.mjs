@@ -176,6 +176,32 @@ test("reports unclosed blocks with source lines", () => {
   );
 });
 
+test("reports an unclosed conditional before the next algorithm", () => {
+  const source = `Algorithm: Main(n)
+if n > 0 then
+  return n
+Sub-Algorithm: Next(n)
+return n`;
+  assert.throws(() => interpret(source, "Main(1)"), (error) => {
+    assert.equal(error.message, "Expected “endif” to close this if statement.");
+    assert.equal(error.location.line, 2);
+    return true;
+  });
+});
+
+test("reports an unclosed loop before the next algorithm", () => {
+  const source = `Algorithm: Main(n)
+while n > 0 do
+  n = n - 1
+Sub-Algorithm: Next(n)
+return n`;
+  assert.throws(() => interpret(source, "Main(1)"), (error) => {
+    assert.equal(error.message, "Expected “endwhile” to close this while loop.");
+    assert.equal(error.location.line, 2);
+    return true;
+  });
+});
+
 test("stops infinite loops at the configured step limit", () => {
   const source = `Algorithm: forever()
 while true then
