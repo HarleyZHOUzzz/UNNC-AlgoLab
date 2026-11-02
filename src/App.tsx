@@ -103,6 +103,7 @@ function App() {
   const [sidebarView, setSidebarView] = useState<SidebarView | null>("files");
   const [sidebarWidth, setSidebarWidth] = useState(220);
   const [inspectorWidth, setInspectorWidth] = useState(320);
+  const [isResizing, setIsResizing] = useState(false);
   const workbenchRef = useRef<HTMLDivElement>(null);
 
   const resizePanel = (panel: "sidebar" | "inspector", delta: number) => {
@@ -114,11 +115,13 @@ function App() {
     if (panel === "sidebar") {
       const width = workbench.querySelector(".sidebar-panel")?.getBoundingClientRect().width ?? sidebarWidth;
       if (width + delta <= 180) {
+        setIsResizing(false);
         setSidebarWidth(220);
         setSidebarView(null);
       } else setSidebarWidth(Math.min(width + delta, width + Math.max(0, available)));
     } else {
       if (inspector - delta <= 220) {
+        setIsResizing(false);
         setInspectorWidth(260);
         setIsInspectorVisible(false);
       } else setInspectorWidth(Math.min(inspector - delta, inspector + Math.max(0, available)));
@@ -128,6 +131,7 @@ function App() {
   const startResize = (event: ReactPointerEvent<HTMLDivElement>, panel: "sidebar" | "inspector") => {
     if (event.button !== 0) return;
     event.preventDefault();
+    setIsResizing(true);
     event.currentTarget.setPointerCapture(event.pointerId);
     let lastX = event.clientX;
     const handle = event.currentTarget;
@@ -136,6 +140,7 @@ function App() {
       lastX = next.clientX;
     };
     const finish = () => {
+      setIsResizing(false);
       handle.removeEventListener("pointermove", move);
       handle.removeEventListener("lostpointercapture", finish);
     };
@@ -529,7 +534,7 @@ function App() {
         onRequestClose={() => void requestQuit()}
       />
 
-      <div className="workbench" ref={workbenchRef} style={{ "--sidebar-width": `${sidebarWidth}px`, "--inspector-width": `${inspectorWidth}px` } as CSSProperties}>
+      <div className={`workbench${isResizing ? " workbench--resizing" : ""}`} ref={workbenchRef} style={{ "--sidebar-width": `${sidebarWidth}px`, "--inspector-width": `${inspectorWidth}px` } as CSSProperties}>
         <Sidebar
           view={sidebarView}
           onViewChange={setSidebarView}
@@ -580,12 +585,10 @@ function App() {
             setCursorPosition(position);
           }}
         />
-        {isInspectorVisible && (
-          <>
-          <div className="panel-resizer" role="separator" aria-label="Resize output and variables" aria-orientation="vertical" tabIndex={0} onPointerDown={(event) => startResize(event, "inspector")} onKeyDown={(event) => resizeWithKeyboard(event, "inspector")} />
+          <div className="panel-resizer panel-resizer--inspector" role="separator" aria-label="Resize output and variables" aria-orientation="vertical" tabIndex={isInspectorVisible ? 0 : -1} aria-hidden={!isInspectorVisible} onPointerDown={(event) => startResize(event, "inspector")} onKeyDown={(event) => resizeWithKeyboard(event, "inspector")} />
+          <div className="inspector-container" aria-hidden={!isInspectorVisible} inert={!isInspectorVisible}>
           <InspectorPanel output={output} variables={variables} problems={problems} selectedTab={inspectorTab} onSelectTab={setInspectorTab} onRevealProblem={revealProblem} />
-          </>
-        )}
+          </div>
       </main>
       </div>
 

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import "@vscode/codicons/dist/codicon.css";
 import {
   ChevronRight,
@@ -71,6 +71,9 @@ function FolderTreeItem({ entry, depth, activePath, onOpen, collapseGeneration }
 }
 
 export function Sidebar({ view, onViewChange, documents, activeDocumentId, folder, folderError, onActivate, onOpenFolder, onOpenFolderFile, onRefreshFolder, onCreateFolder, onCreateFile, onSearchResult }: SidebarProps) {
+  const lastView = useRef<SidebarView>("files");
+  if (view) lastView.current = view;
+  const displayedView = view ?? lastView.current;
   const [editorsExpanded, setEditorsExpanded] = useState(true);
   const [folderExpanded, setFolderExpanded] = useState(true);
   const [collapseGeneration, setCollapseGeneration] = useState(0);
@@ -131,9 +134,9 @@ export function Sidebar({ view, onViewChange, documents, activeDocumentId, folde
           <span className="codicon codicon-search" aria-hidden="true" />
         </button>
       </nav>
-      {view && <div className="sidebar-panel">
-        <div className="sidebar-heading">{view === "files" ? "explorer" : "search"}</div>
-        {view === "files" ? <>
+      <div className="sidebar-panel" aria-hidden={!view} inert={!view}>
+        <div className="sidebar-heading">{displayedView === "files" ? "explorer" : "search"}</div>
+        {displayedView === "files" ? <>
           {!folder && documents.length > 0 && <>
           <div className="sidebar-section-title">
             <button type="button" className="sidebar-section-label" aria-expanded={editorsExpanded} onClick={() => setEditorsExpanded((expanded) => !expanded)}>
@@ -216,7 +219,7 @@ export function Sidebar({ view, onViewChange, documents, activeDocumentId, folde
           {query.trim() && <p className="sidebar-hint" aria-live="polite">{results.length} {results.length === 1 ? "result" : "results"} in open files</p>}
           <div className="sidebar-list">{results.map((result) => <button type="button" className="search-result" key={`${result.id}-${result.from}`} onClick={() => onSearchResult(result.id, result.from, result.to)}><span className="search-result__file">{result.name} <span>Ln {result.line}</span></span><span className="search-result__text">{result.text}</span></button>)}</div>
         </>}
-      </div>}
+      </div>
     </aside>
   );
 }
