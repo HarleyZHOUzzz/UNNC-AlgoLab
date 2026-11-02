@@ -12,7 +12,7 @@ import { InspectorPanel } from "./components/InspectorPanel";
 import { RenameDialog } from "./components/RenameDialog";
 import { RunDialog } from "./components/RunDialog";
 import { StatusBar } from "./components/StatusBar";
-import { Sidebar } from "./components/Sidebar";
+import { Sidebar, type SidebarView } from "./components/Sidebar";
 import { Toolbar, ToolbarActions } from "./components/Toolbar";
 import { useDocumentWorkspace } from "./hooks/useDocumentWorkspace";
 import { useInterpreter } from "./hooks/useInterpreter";
@@ -100,6 +100,7 @@ function App() {
   const [runConfiguration, setRunConfiguration] =
     useState<RunConfiguration | null>(null);
   const [isInspectorVisible, setIsInspectorVisible] = useState(true);
+  const [sidebarView, setSidebarView] = useState<SidebarView | null>("files");
   const [sidebarWidth, setSidebarWidth] = useState(220);
   const [inspectorWidth, setInspectorWidth] = useState(320);
   const workbenchRef = useRef<HTMLDivElement>(null);
@@ -111,9 +112,16 @@ function App() {
     const inspector = workbench.querySelector(".inspector")?.getBoundingClientRect().width ?? 0;
     const available = workbench.clientWidth - sidebar - inspector - 220;
     if (panel === "sidebar") {
-      setSidebarWidth((width) => Math.max(140, Math.min(width + delta, width + Math.max(0, available))));
+      const width = workbench.querySelector(".sidebar-panel")?.getBoundingClientRect().width ?? sidebarWidth;
+      if (width + delta <= 180) {
+        setSidebarWidth(220);
+        setSidebarView(null);
+      } else setSidebarWidth(Math.min(width + delta, width + Math.max(0, available)));
     } else {
-      setInspectorWidth((width) => Math.max(200, Math.min(width - delta, width + Math.max(0, available))));
+      if (inspector - delta <= 220) {
+        setInspectorWidth(260);
+        setIsInspectorVisible(false);
+      } else setInspectorWidth(Math.min(inspector - delta, inspector + Math.max(0, available)));
     }
   };
 
@@ -523,6 +531,8 @@ function App() {
 
       <div className="workbench" ref={workbenchRef} style={{ "--sidebar-width": `${sidebarWidth}px`, "--inspector-width": `${inspectorWidth}px` } as CSSProperties}>
         <Sidebar
+          view={sidebarView}
+          onViewChange={setSidebarView}
           documents={workspace.documents}
           activeDocumentId={workspace.activeDocumentId}
           folder={workspace.folder}

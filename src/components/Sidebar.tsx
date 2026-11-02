@@ -9,7 +9,7 @@ import {
 import type { FolderEntry, OpenedFolder } from "../services/fileService";
 import { isDocumentDirty, type EditorDocument } from "../types/editor";
 
-type SidebarView = "files" | "search";
+export type SidebarView = "files" | "search";
 
 function FolderContents({ expanded, children, root = false }: { expanded: boolean; children: ReactNode; root?: boolean }) {
   return <div className={`sidebar-collapse${expanded ? " sidebar-collapse--expanded" : ""}${root ? " sidebar-collapse--root" : ""}`} aria-hidden={!expanded} inert={!expanded}>
@@ -18,6 +18,8 @@ function FolderContents({ expanded, children, root = false }: { expanded: boolea
 }
 
 interface SidebarProps {
+  view: SidebarView | null;
+  onViewChange: (view: SidebarView | null) => void;
   documents: EditorDocument[];
   activeDocumentId: string;
   folder: OpenedFolder | null;
@@ -68,8 +70,7 @@ function FolderTreeItem({ entry, depth, activePath, onOpen, collapseGeneration }
   );
 }
 
-export function Sidebar({ documents, activeDocumentId, folder, folderError, onActivate, onOpenFolder, onOpenFolderFile, onRefreshFolder, onCreateFolder, onCreateFile, onSearchResult }: SidebarProps) {
-  const [view, setView] = useState<SidebarView | null>("files");
+export function Sidebar({ view, onViewChange, documents, activeDocumentId, folder, folderError, onActivate, onOpenFolder, onOpenFolderFile, onRefreshFolder, onCreateFolder, onCreateFile, onSearchResult }: SidebarProps) {
   const [editorsExpanded, setEditorsExpanded] = useState(true);
   const [folderExpanded, setFolderExpanded] = useState(true);
   const [collapseGeneration, setCollapseGeneration] = useState(0);
@@ -111,7 +112,7 @@ export function Sidebar({ documents, activeDocumentId, folder, folderError, onAc
     });
   }, [documents, query]);
 
-  const toggle = (next: SidebarView) => setView((current) => current === next ? null : next);
+  const toggle = (next: SidebarView) => onViewChange(view === next ? null : next);
   const folderActions = () => (
     <div className="sidebar-section-actions">
       <button type="button" onClick={() => { setFolderExpanded(true); setCreatingFolder(false); setCreatingFile(true); setNewFileName(""); setNewFileError(null); }} aria-label="New file" title="New file"><span className="codicon codicon-new-file" aria-hidden="true" /></button>
