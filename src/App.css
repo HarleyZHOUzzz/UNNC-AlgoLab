@@ -25,6 +25,13 @@
   height: 100%;
   min-width: 0;
   background: var(--window-surface);
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.ide-shell :is(input, textarea, [contenteditable="true"], [contenteditable="true"] *) {
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 .ide-shell--unfocused {
