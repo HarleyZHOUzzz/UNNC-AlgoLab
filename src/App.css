@@ -2015,13 +2015,14 @@ button {
   padding: 6px 0;
   border-right-width: 0.5px;
   border-color: var(--panel-border);
+  transition: border-color 200ms ease;
   background: var(--panel-background);
   gap: 3px;
   padding-top: 6px;
 }
 
 .sidebar--collapsed .activity-bar {
-  border-right: 0;
+  border-right-color: transparent;
 }
 
 .activity-button {
@@ -2037,6 +2038,7 @@ button {
   place-items: center;
   border-radius: 8px;
   color: #858585;
+  transition: background-color 200ms ease, color 200ms ease;
 }
 
 .activity-button--active {
@@ -2309,6 +2311,8 @@ button {
   .sidebar-collapse,
   .workspace,
   .sidebar-panel-clip,
+  .activity-bar,
+  .activity-button,
   .sidebar-chevron,
   .folder-tree-icon > svg {
     transition: none;
