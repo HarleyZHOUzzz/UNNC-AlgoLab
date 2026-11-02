@@ -348,7 +348,7 @@ function App() {
         return;
       }
 
-      await getCurrentWindow().close();
+      await getCurrentWindow().destroy();
     } catch (error) {
       console.error("Unable to quit UNNC AlgoLab.", error);
     } finally {
