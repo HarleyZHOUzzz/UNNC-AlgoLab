@@ -705,7 +705,8 @@ button {
 
 .sidebar-list {
   min-height: 0;
-  overflow: auto;
+  overflow: visible;
+  flex: none;
 }
 
 .sidebar-empty-folder {
@@ -758,8 +759,8 @@ button {
   overflow: hidden;
 }
 
-.sidebar-collapse--root > .sidebar-collapse__content {
-  overflow: auto;
+.sidebar-collapse--root {
+  flex: none;
 }
 
 .sidebar-chevron {
@@ -918,6 +919,7 @@ button {
   flex-direction: column;
   width: 220px;
   min-height: 0;
+  overflow: hidden auto;
   border-right: 0;
   background: var(--panel-background);
 }
@@ -1884,6 +1886,11 @@ button {
 }
 
 .sidebar-heading {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  flex: none;
+  background: var(--panel-background);
   padding: 0 16px;
   color: #bbbbbb;
   display: flex;
@@ -1898,6 +1905,7 @@ button {
 }
 
 .sidebar-section-title {
+  flex: none;
   justify-content: space-between;
   font-size: 10px;
   font-weight: 600;
