@@ -459,6 +459,27 @@ button {
   content: "";
 }
 
+.panel-resizer::before {
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  left: 50%;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: #72767c;
+  box-shadow: 0 -5px #72767c, 0 5px #72767c;
+  content: "";
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.panel-resizer:hover::before,
+.panel-resizer:focus-visible::before,
+.panel-resizer:active::before {
+  opacity: 0;
+}
+
 .panel-resizer:hover::after,
 .panel-resizer:focus-visible::after,
 .panel-resizer:active::after {
