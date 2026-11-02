@@ -28,6 +28,11 @@ test("finds algorithm headers despite unfinished bodies and retains navigation o
   assert.equal(findAlgorithms(files, "dou")[0].label, "Double(x)");
 });
 
+test("finds sub-algorithms written with a space", () => {
+  const files = workspaceFiles([doc(null, "Algorithm: Main()\nSub Algorithm: Double(x)\nSubAlgorithm: AddOne(x)")]);
+  assert.deepEqual(findAlgorithms(files, "").map((item) => item.label), ["Main()", "Double(x)", "AddOne(x)"]);
+});
+
 test("text search treats special characters literally and uses exact CRLF offsets", () => {
   const content = "# first\r\nprint a+b + A+B\r\nreturn a";
   const matches = findText(workspaceFiles([doc(null, content)]), "a+b");

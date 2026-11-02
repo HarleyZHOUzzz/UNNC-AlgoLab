@@ -109,7 +109,7 @@ function isMetadata(line: string): boolean {
 
 function parseHeader(line: SourceLine): AlgorithmHeader | null {
   const match = line.text.match(
-    /^(Algorithm|Sub-Algorithm|SubAlgorithm)\s*:\s*([\p{L}_][\p{L}\p{N}_]*)\s*\((.*)\)\s*$/iu,
+    /^(Algorithm|Sub(?:-|\s+)?Algorithm)\s*:\s*([\p{L}_][\p{L}\p{N}_]*)\s*\((.*)\)\s*$/iu,
   );
   if (!match) {
     return null;

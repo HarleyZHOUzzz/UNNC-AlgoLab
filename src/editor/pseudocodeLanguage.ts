@@ -38,7 +38,7 @@ const pseudocodeParser: StreamParser<PseudocodeState> = {
   },
   indent: (state, textAfter, context) => {
     const content = contentWithoutLineNumber(textAfter);
-    if (/^(?:Algorithm|Sub-?Algorithm)\b/i.test(content)) {
+    if (/^(?:Algorithm|Sub(?:-|\s+)?Algorithm)\b/i.test(content)) {
       return 0;
     }
     if (CLOSING_KEYWORD.test(content) || BRANCH_KEYWORD.test(content)) {
@@ -75,7 +75,7 @@ const pseudocodeParser: StreamParser<PseudocodeState> = {
     if (stream.match(/\d+(?:\.\d+)?/)) {
       return "number";
     }
-    if (isLineStart && stream.match(/(?:Algorithm|Sub-?Algorithm)\b/i)) {
+    if (isLineStart && stream.match(/(?:Algorithm|Sub(?:-|\s+)?Algorithm)\b/i)) {
       state.depth = 0;
       return "keyword";
     }

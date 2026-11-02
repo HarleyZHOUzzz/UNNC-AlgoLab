@@ -44,7 +44,7 @@ export function findAlgorithms(files: SearchFile[], term: string): SearchMatch[]
   for (const file of files) {
     let offset = 0;
     for (const [index, line] of (file.content ?? "").replace(/\r\n?/g, "\n").split("\n").entries()) {
-      const match = /^\s*(?:\d+\s*[:.,]?\s*)?(?:Algorithm|Sub-?Algorithm)\s*:\s*([\p{L}_][\p{L}\p{N}_]*)\s*\(([^)]*)\)/iu.exec(line);
+      const match = /^\s*(?:\d+\s*[:.,]?\s*)?(?:Algorithm|Sub(?:-|\s+)?Algorithm)\s*:\s*([\p{L}_][\p{L}\p{N}_]*)\s*\(([^)]*)\)/iu.exec(line);
       if (match && match[1].toLowerCase().includes(term.toLowerCase())) {
         const start = match[0].lastIndexOf(match[1], match[0].indexOf("("));
         results.push({ file, label: `${match[1]}(${match[2].trim()})`, line: index + 1, from: offset + start, to: offset + start + match[1].length });

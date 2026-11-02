@@ -11,6 +11,24 @@ test("new file template is a valid algorithm with metadata", () => {
   assert.equal(interpret(NEW_ALGORITHM_TEMPLATE, "Main()").result, null);
 });
 
+test("calls multiple sub-algorithms with different header spellings", () => {
+  const source = `Algorithm: Main()
+Require:
+Return:
+return AddOne(Double(3))
+
+Sub Algorithm: Double(x)
+Require: a number
+Return: a number
+return x * 2
+
+Sub-Algorithm: AddOne(x)
+Require: a number
+Return: a number
+return x + 1`;
+  assert.equal(interpret(source, "Main()").result, 7);
+});
+
 test("distinguishes declarations, control keywords, functions, and variables", () => {
   const doc = "Algorithm: Main(n)\nreturn Double(n)";
   const state = EditorState.create({ doc, extensions: pseudocodeExtensions });

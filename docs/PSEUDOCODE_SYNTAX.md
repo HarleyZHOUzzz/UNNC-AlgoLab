@@ -19,10 +19,11 @@ Sub-Algorithm: Double(x)
 ```text
 Algorithm: 名称(参数1, 参数2)
 Sub-Algorithm: 名称(参数1, 参数2)
+Sub Algorithm: 名称(参数1, 参数2)
 SubAlgorithm: 名称(参数1, 参数2)
 ```
 
-- `Algorithm`、`Sub-Algorithm`、`SubAlgorithm` 大小写不敏感；冒号和圆括号必需。无参数也要写 `()`。
+- `Algorithm`、`Sub-Algorithm`、`Sub Algorithm`、`SubAlgorithm` 大小写不敏感；冒号和圆括号必需。无参数也要写 `()`。
 - 名称和参数名以 Unicode 字母或 `_` 开头，后面可用 Unicode 字母、数字、`_`。例如 `求和_1` 有效，`1sum` 无效。
 - 同一个算法的参数名不能重复，参数用英文逗号分隔。参数数量必须与调用时的实参数量一致。
 - 可以在标题后、第一条语句前写任意数量的 `Require:`、`Requires:`、`Return:`、`Returns:` 说明行。它们不参与运行，也不会验证输入或返回值；放在语句之后就不再是说明行。
