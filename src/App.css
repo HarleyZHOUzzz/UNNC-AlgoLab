@@ -1410,7 +1410,7 @@ button {
   min-width: 0;
   border-right: 1px solid #323438;
   color: #4b5059;
-  background: #191a1d;
+  background: var(--editor-background);
 }
 
 .editor-surface .cm-lineNumbers .cm-gutterElement {
