@@ -131,14 +131,15 @@ button {
 .editor-surface .cm-scroller {
   overflow: auto;
   overscroll-behavior: none;
-  scrollbar-color: #555555 transparent;
+  scrollbar-width: thin;
+  scrollbar-color: #3d3d3d transparent;
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   line-height: 1.75;
 }
 
 .editor-surface .cm-scroller::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 5px;
+  height: 5px;
 }
 
 .editor-surface .cm-scroller::-webkit-scrollbar-track,
@@ -147,12 +148,12 @@ button {
 }
 
 .editor-surface .cm-scroller::-webkit-scrollbar-thumb {
-  border-radius: 4px;
-  background: #555555;
+  border-radius: 3px;
+  background: #3d3d3d;
 }
 
 .editor-surface .cm-scroller::-webkit-scrollbar-thumb:hover {
-  background: #686868;
+  background: #505050;
 }
 
 .editor-surface .cm-selectionBackground {
