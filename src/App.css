@@ -455,7 +455,9 @@ button {
   position: absolute;
   inset: 0 1px 5px;
   border-radius: 3px;
-  background: transparent;
+  background: var(--accent-blue);
+  opacity: 0;
+  transition: opacity 160ms ease;
   content: "";
 }
 
@@ -472,6 +474,7 @@ button {
   content: "";
   transform: translate(-50%, -50%);
   pointer-events: none;
+  transition: opacity 160ms ease;
 }
 
 .panel-resizer:hover::before,
@@ -483,7 +486,12 @@ button {
 .panel-resizer:hover::after,
 .panel-resizer:focus-visible::after,
 .panel-resizer:active::after {
-  background: var(--accent-blue);
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel-resizer::before,
+  .panel-resizer::after { transition: none; }
 }
 
 .panel-resizer:focus-visible { outline: none; }
