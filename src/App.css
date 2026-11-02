@@ -131,28 +131,31 @@ button {
 .editor-surface .cm-scroller {
   overflow: auto;
   overscroll-behavior: none;
-  scrollbar-width: thin;
-  scrollbar-color: #3d3d3d transparent;
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   line-height: 1.75;
 }
 
-.editor-surface .cm-scroller::-webkit-scrollbar {
+:is(.editor-surface .cm-scroller, .sidebar-panel, .quick-picker__results) {
+  scrollbar-width: thin;
+  scrollbar-color: #3d3d3d transparent;
+}
+
+:is(.editor-surface .cm-scroller, .sidebar-panel, .quick-picker__results)::-webkit-scrollbar {
   width: 5px;
   height: 5px;
 }
 
-.editor-surface .cm-scroller::-webkit-scrollbar-track,
-.editor-surface .cm-scroller::-webkit-scrollbar-corner {
+:is(.editor-surface .cm-scroller, .sidebar-panel, .quick-picker__results)::-webkit-scrollbar-track,
+:is(.editor-surface .cm-scroller, .sidebar-panel, .quick-picker__results)::-webkit-scrollbar-corner {
   background: transparent;
 }
 
-.editor-surface .cm-scroller::-webkit-scrollbar-thumb {
+:is(.editor-surface .cm-scroller, .sidebar-panel, .quick-picker__results)::-webkit-scrollbar-thumb {
   border-radius: 3px;
   background: #3d3d3d;
 }
 
-.editor-surface .cm-scroller::-webkit-scrollbar-thumb:hover {
+:is(.editor-surface .cm-scroller, .sidebar-panel, .quick-picker__results)::-webkit-scrollbar-thumb:hover {
   background: #505050;
 }
 
