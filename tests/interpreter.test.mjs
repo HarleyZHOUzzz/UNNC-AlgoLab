@@ -1,6 +1,33 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { interpret } from "../src/interpreter/index.ts";
+import { NEW_ALGORITHM_TEMPLATE } from "../src/constants/editor.ts";
+import { EditorState } from "@codemirror/state";
+import { highlightingFor, syntaxTree } from "@codemirror/language";
+import { getStyleTags, tags } from "@lezer/highlight";
+import { pseudocodeExtensions } from "../src/editor/pseudocodeLanguage.ts";
+
+test("new file template is a valid algorithm with metadata", () => {
+  assert.equal(interpret(NEW_ALGORITHM_TEMPLATE, "Main()").result, null);
+});
+
+test("distinguishes declarations, control keywords, functions, and variables", () => {
+  const doc = "Algorithm: Main(n)\nreturn Double(n)";
+  const state = EditorState.create({ doc, extensions: pseudocodeExtensions });
+  const cursor = syntaxTree(state).cursor();
+  const tokens = new Map();
+  do {
+    const style = getStyleTags(cursor.node);
+    if (style) tokens.set(doc.slice(cursor.from, cursor.to), style.tags);
+  } while (cursor.next());
+  assert.ok(tokens.get("Main").includes(tags.function(tags.variableName)));
+  assert.ok(tokens.get("Double").includes(tags.function(tags.variableName)));
+  assert.ok(tokens.get("n").includes(tags.variableName));
+  assert.ok(tokens.get("Algorithm").includes(tags.keyword));
+  assert.ok(tokens.get("return").includes(tags.controlKeyword));
+  assert.notEqual(highlightingFor(state, tokens.get("Algorithm")), highlightingFor(state, tokens.get("return")));
+  assert.notEqual(highlightingFor(state, tokens.get("Double")), highlightingFor(state, tokens.get("n")));
+});
 
 test("executes recursive factorial", () => {
   const source = `Algorithm: factorial(n)
@@ -68,8 +95,8 @@ endif`;
   assert.equal(interpret(source, call).result, 2);
 });
 
-test("supports common pseudocode variants and Chinese punctuation", () => {
-  const source = `Algorithm：countEven（n）
+test("supports mathematical symbols in pseudocode", () => {
+  const source = `Algorithm: countEven(n)
 let i ← 0
 let count ← 0
 while i <> n do
@@ -89,6 +116,35 @@ return count`;
     { name: "i", type: "number", value: "6" },
     { name: "count", type: "number", value: "3" },
   ]);
+});
+
+test("preserves punctuation and comment markers inside strings", () => {
+  const source = `Algorithm: Main()
+print "你好，世界！ # not a comment // 仍是字符串"
+print "保留中文：括号（），引号‘好’！"
+return "a←b ≤ c ≠ d"`;
+  const result = interpret(source, "Main()");
+  assert.deepEqual(result.output, ['"你好，世界！ # not a comment // 仍是字符串"', '"保留中文：括号（），引号‘好’！"']);
+  assert.equal(result.result, "a←b ≤ c ≠ d");
+});
+
+test("rejects Chinese punctuation as syntax", () => {
+  for (const source of ["Algorithm：Main()\nreturn 1", "Algorithm: Main（）\nreturn 1", "Algorithm: Main()\nreturn [1，2]", "Algorithm: Main()\nreturn “hello”"]) {
+    assert.throws(() => interpret(source, "Main()"), (error) => error.phase === "syntax");
+  }
+});
+
+test("recognizes comments after strings ending with escaped backslashes", () => {
+  const source = String.raw`Algorithm: Main()
+let path = "dir\\" # comment after a literal backslash
+return path // another comment`;
+  assert.equal(interpret(source, "Main()").result, "dir\\");
+});
+
+test("keeps escaped quotes and comment markers inside strings", () => {
+  const source = String.raw`Algorithm: Main()
+return "say \"# hello\" and // stay" # real comment`;
+  assert.equal(interpret(source, "Main()").result, 'say "# hello" and // stay');
 });
 
 test("reports unclosed blocks with source lines", () => {

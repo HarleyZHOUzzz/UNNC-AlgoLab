@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { isTauri } from "@tauri-apps/api/core";
+import { invoke, isTauri } from "@tauri-apps/api/core";
 import { basename, join } from "@tauri-apps/api/path";
-import { DEFAULT_ALGORITHM } from "../constants/editor";
+import { NEW_ALGORITHM_TEMPLATE } from "../constants/editor";
 import {
   confirmCloseAllEditors,
   confirmDiscardChanges,
+  confirmSwitchFolder,
+  createAlgoFile,
   createFolder,
   listAlgoFolder,
   readFile,
@@ -30,26 +32,29 @@ function createDocument(
   return { id, name, path, content, savedContent };
 }
 
-const INITIAL_DOCUMENT = createDocument(
-  "welcome",
-  "fibonacci.algo",
-  DEFAULT_ALGORITHM,
-);
+const EMPTY_DOCUMENT = createDocument("", "");
 
 export function useDocumentWorkspace(autoSaveEnabled: boolean) {
-  const [documents, setDocuments] = useState<EditorDocument[]>([
-    INITIAL_DOCUMENT,
-  ]);
-  const [activeDocumentId, setActiveDocumentId] = useState(
-    INITIAL_DOCUMENT.id,
-  );
+  const [documents, setDocuments] = useState<EditorDocument[]>([]);
+  const [activeDocumentId, setActiveDocumentId] = useState("");
   const [status, setStatus] = useState("Ready");
   const [folder, setFolder] = useState<OpenedFolder | null>(null);
+  const [pendingFolder, setPendingFolder] = useState<OpenedFolder | null>(null);
   const [folderError, setFolderError] = useState<string | null>(null);
   const nextDocumentNumber = useRef(1);
   const autoSaveInFlight = useRef(new Set<string>());
   const openingPaths = useRef(new Set<string>());
   const [autoSaveError, setAutoSaveError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isTauri()) return;
+    void invoke<string | null>("take_startup_folder").then(async (path) => {
+      if (!path) return;
+      const selected = { name: await basename(path), path, entries: await listAlgoFolder(path) };
+      setFolder(selected);
+      setStatus(`Opened folder ${selected.name}`);
+    }).catch((error) => setFolderError(`Open folder failed: ${String(error)}`));
+  }, []);
 
   useEffect(() => {
     if (!autoSaveEnabled || !isTauri()) return;
@@ -76,7 +81,7 @@ export function useDocumentWorkspace(autoSaveEnabled: boolean) {
   const activeDocument = useMemo(
     () =>
       documents.find((document) => document.id === activeDocumentId) ??
-      documents[0],
+      documents[0] ?? EMPTY_DOCUMENT,
     [activeDocumentId, documents],
   );
 
@@ -97,6 +102,9 @@ export function useDocumentWorkspace(autoSaveEnabled: boolean) {
     const document = createDocument(
       `untitled-${number}-${Date.now()}`,
       `untitled-${number}.algo`,
+      NEW_ALGORITHM_TEMPLATE,
+      null,
+      "",
     );
 
     setDocuments((current) => [...current, document]);
@@ -155,13 +163,38 @@ export function useDocumentWorkspace(autoSaveEnabled: boolean) {
     try {
       const selected = await selectFolder();
       if (!selected) return;
-      setFolder(selected);
-      setFolderError(null);
-      setStatus(`Opened folder ${selected.name}`);
+      if (folder) setPendingFolder(selected);
+      else {
+        setFolder(selected);
+        setFolderError(null);
+        setStatus(`Opened folder ${selected.name}`);
+      }
     } catch (error) {
       setFolderError(`Open folder failed: ${String(error)}`);
     }
-  }, []);
+  }, [folder]);
+
+  const openPendingFolder = useCallback(async (newWindow: boolean) => {
+    if (!pendingFolder) return;
+    try {
+      if (newWindow) await invoke("open_folder_window", { path: pendingFolder.path });
+      else {
+        if (pendingFolder.path !== folder?.path) {
+          const unsavedFileCount = documents.filter(isDocumentDirty).length;
+          if (unsavedFileCount > 0 && !(await confirmSwitchFolder(unsavedFileCount))) return;
+          setDocuments([]);
+          setActiveDocumentId("");
+        }
+        setFolder(pendingFolder);
+        setStatus(`Opened folder ${pendingFolder.name}`);
+      }
+      setFolderError(null);
+      setPendingFolder(null);
+    } catch (error) {
+      setFolderError(`Open folder failed: ${String(error)}`);
+      setPendingFolder(null);
+    }
+  }, [pendingFolder, folder, documents]);
 
   const refreshFolder = useCallback(async () => {
     if (!folder) return;
@@ -206,6 +239,18 @@ export function useDocumentWorkspace(autoSaveEnabled: boolean) {
       return `Create folder failed: ${String(error)}`;
     }
   }, [folder, refreshFolder]);
+
+  const createWorkspaceFile = useCallback(async (name: string): Promise<string | null> => {
+    if (!folder) return "Open a folder first.";
+    try {
+      const path = await createAlgoFile(folder.path, name, NEW_ALGORITHM_TEMPLATE);
+      await refreshFolder();
+      await openFilePath(path);
+      return null;
+    } catch (error) {
+      return `Create file failed: ${String(error)}`;
+    }
+  }, [folder, refreshFolder, openFilePath]);
 
   const saveDocumentAs = useCallback(
     async (documentId = activeDocumentId): Promise<boolean> => {
@@ -306,13 +351,8 @@ export function useDocumentWorkspace(autoSaveEnabled: boolean) {
       );
 
       if (remainingDocuments.length === 0) {
-        const replacement = createDocument(
-          `untitled-${nextDocumentNumber.current}-${Date.now()}`,
-          `untitled-${nextDocumentNumber.current}.algo`,
-        );
-        nextDocumentNumber.current += 1;
-        setDocuments([replacement]);
-        setActiveDocumentId(replacement.id);
+        setDocuments([]);
+        setActiveDocumentId("");
       } else {
         setDocuments(remainingDocuments);
         if (activeDocumentId === documentId) {
@@ -338,14 +378,8 @@ export function useDocumentWorkspace(autoSaveEnabled: boolean) {
       return;
     }
 
-    const number = nextDocumentNumber.current;
-    nextDocumentNumber.current += 1;
-    const replacement = createDocument(
-      `untitled-${number}-${Date.now()}`,
-      `untitled-${number}.algo`,
-    );
-    setDocuments([replacement]);
-    setActiveDocumentId(replacement.id);
+    setDocuments([]);
+    setActiveDocumentId("");
     setStatus("Closed all editors");
   }, [documents]);
 
@@ -406,6 +440,9 @@ export function useDocumentWorkspace(autoSaveEnabled: boolean) {
     status,
     autoSaveError,
     folder,
+    pendingFolder,
+    cancelOpenFolder: () => setPendingFolder(null),
+    openPendingFolder,
     folderError,
     setActiveDocumentId,
     setDocumentContent: (id: string, content: string) =>
@@ -416,6 +453,7 @@ export function useDocumentWorkspace(autoSaveEnabled: boolean) {
     openFilePath,
     refreshFolder,
     createWorkspaceFolder,
+    createWorkspaceFile,
     saveDocument,
     saveDocumentAs,
     saveAllDocuments,

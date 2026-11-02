@@ -1,7 +1,14 @@
 use serde::Serialize;
-use std::path::PathBuf;
+use std::{
+    collections::HashMap,
+    io::Write,
+    path::PathBuf,
+    sync::{
+        Mutex,
+        atomic::{AtomicU64, Ordering},
+    },
+};
 
-#[cfg(any(target_os = "windows", target_os = "macos"))]
 use tauri::Manager;
 
 use tauri::{
@@ -75,6 +82,30 @@ fn create_folder(parent: PathBuf, name: String) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn create_algo_file(parent: PathBuf, name: String, content: String) -> Result<PathBuf, String> {
+    let name = name.trim();
+    if name.is_empty() || name == "." || name == ".." || name.contains(['/', '\\', ':', '\0']) {
+        return Err("Enter a file name without path separators.".into());
+    }
+    let name = if name.to_ascii_lowercase().ends_with(".algo") {
+        name.to_owned()
+    } else if name.contains('.') {
+        return Err("The file name must end in .algo.".into());
+    } else {
+        format!("{name}.algo")
+    };
+    let path = parent.join(name);
+    let mut file = std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&path)
+        .map_err(|error| format!("Could not create file: {error}"))?;
+    file.write_all(content.as_bytes())
+        .map_err(|error| format!("Could not write new file: {error}"))?;
+    Ok(path)
+}
+
+#[tauri::command]
 fn write_text_file(path: PathBuf, content: String) -> Result<(), String> {
     std::fs::write(path, content).map_err(|error| error.to_string())
 }
@@ -97,9 +128,76 @@ fn exit_app(app: tauri::AppHandle) {
     app.exit(0);
 }
 
+#[derive(Default)]
+struct PendingFolders(Mutex<HashMap<String, PathBuf>>);
+
+static NEXT_WINDOW: AtomicU64 = AtomicU64::new(1);
+
+#[tauri::command]
+fn take_startup_folder(
+    window: tauri::WebviewWindow,
+    folders: tauri::State<'_, PendingFolders>,
+) -> Result<Option<PathBuf>, String> {
+    Ok(folders
+        .0
+        .lock()
+        .map_err(|error| error.to_string())?
+        .remove(window.label()))
+}
+
+#[tauri::command]
+async fn open_folder_window(app: tauri::AppHandle, path: PathBuf) -> Result<(), String> {
+    if !path.is_dir() {
+        return Err("The folder no longer exists.".into());
+    }
+    let label = format!("workspace-{}", NEXT_WINDOW.fetch_add(1, Ordering::Relaxed));
+    let mut config = app
+        .config()
+        .app
+        .windows
+        .first()
+        .ok_or("Missing window configuration")?
+        .clone();
+    config.label = label.clone();
+    app.state::<PendingFolders>()
+        .0
+        .lock()
+        .map_err(|error| error.to_string())?
+        .insert(label.clone(), path);
+    let result =
+        tauri::WebviewWindowBuilder::from_config(&app, &config).and_then(|builder| builder.build());
+    match result {
+        Ok(window) => {
+            #[cfg(target_os = "windows")]
+            {
+                window
+                    .set_decorations(false)
+                    .map_err(|error| error.to_string())?;
+                window.remove_menu().map_err(|error| error.to_string())?;
+            }
+            #[cfg(target_os = "macos")]
+            window
+                .set_background_color(Some(tauri::window::Color(0, 0, 0, 0)))
+                .map_err(|error| error.to_string())?;
+            #[cfg(not(any(target_os = "windows", target_os = "macos")))]
+            let _ = window;
+            Ok(())
+        }
+        Err(error) => {
+            app.state::<PendingFolders>()
+                .0
+                .lock()
+                .map_err(|error| error.to_string())?
+                .remove(&label);
+            Err(error.to_string())
+        }
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .manage(PendingFolders::default())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .menu(|app| {
@@ -243,15 +341,24 @@ pub fn run() {
                     | "stop_algorithm"
                     | "quit_app"
             ) {
-                let _ = app.emit("menu-action", action);
+                if let Some(window) = app
+                    .webview_windows()
+                    .into_values()
+                    .find(|window| window.is_focused().unwrap_or(false))
+                {
+                    let _ = app.emit_to(window.label(), "menu-action", action);
+                }
             }
         })
         .invoke_handler(tauri::generate_handler![
             read_text_file,
             list_algo_folder,
             create_folder,
+            create_algo_file,
             write_text_file,
             rename_text_file,
+            open_folder_window,
+            take_startup_folder,
             exit_app
         ])
         .run(tauri::generate_context!())
@@ -260,9 +367,39 @@ pub fn run() {
 
 #[cfg(test)]
 mod tests {
-    use super::{collect_algo_entries, create_folder};
+    use super::{collect_algo_entries, create_algo_file, create_folder};
     use std::fs;
     use std::time::{SystemTime, UNIX_EPOCH};
+
+    #[test]
+    fn new_algo_file_stays_in_folder_without_overwriting_existing_files() {
+        let id = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let root =
+            std::env::temp_dir().join(format!("unnc-algolab-new-file-{}-{id}", std::process::id()));
+        fs::create_dir_all(&root).unwrap();
+        let path = create_algo_file(
+            root.clone(),
+            "example".into(),
+            "Algorithm: Main()\nRequire:\nReturn:\n".into(),
+        )
+        .unwrap();
+        assert_eq!(path, root.join("example.algo"));
+        assert_eq!(
+            fs::read_to_string(&path).unwrap(),
+            "Algorithm: Main()\nRequire:\nReturn:\n"
+        );
+        fs::write(&path, "keep").unwrap();
+        assert!(
+            create_algo_file(root.clone(), "example.algo".into(), "replacement".into()).is_err()
+        );
+        assert_eq!(fs::read_to_string(path).unwrap(), "keep");
+        assert!(create_algo_file(root.clone(), "../outside".into(), "".into()).is_err());
+        assert!(create_algo_file(root.clone(), "example.txt".into(), "".into()).is_err());
+        fs::remove_dir_all(root).unwrap();
+    }
 
     #[test]
     fn folder_tree_contains_only_algo_files_and_directories() {

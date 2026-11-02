@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { invoke, isTauri } from "@tauri-apps/api/core";
+import { isTauri } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { redo, selectAll, undo } from "@codemirror/commands";
@@ -131,6 +131,8 @@ function App() {
       interpreter.stop();
       return;
     }
+
+    if (!workspace.activeDocumentId) return;
 
     try {
       const entry = getEntryFunction(workspace.activeDocument.content);
@@ -281,7 +283,7 @@ function App() {
         return;
       }
 
-      await invoke("exit_app");
+      await getCurrentWindow().close();
     } catch (error) {
       console.error("Unable to quit UNNC AlgoLab.", error);
     } finally {
@@ -368,7 +370,9 @@ function App() {
   }, [workspace.activeDocumentId]);
 
   useEffect(() => {
-    const title = `${isDocumentDirty(workspace.activeDocument) ? "● " : ""}${workspace.activeDocument.name} — UNNC AlgoLab`;
+    const title = workspace.activeDocumentId
+      ? `${isDocumentDirty(workspace.activeDocument) ? "● " : ""}${workspace.activeDocument.name} — UNNC AlgoLab`
+      : "UNNC AlgoLab";
     document.title = title;
     if (isTauri()) {
       void getCurrentWindow().setTitle(title);
@@ -448,6 +452,7 @@ function App() {
 
     const unlistenPromise = getCurrentWindow().onCloseRequested(
       (event) => {
+        if (quitInProgressRef.current) return;
         const unsavedFileCount = documentsRef.current.filter(
           isDocumentDirty,
         ).length;
@@ -482,12 +487,11 @@ function App() {
           folder={workspace.folder}
           folderError={workspace.folderError}
           onActivate={workspace.setActiveDocumentId}
-          onNew={workspace.newDocument}
-          onOpen={() => void workspace.openDocuments()}
           onOpenFolder={() => void workspace.openFolder()}
           onOpenFolderFile={(path) => void workspace.openFilePath(path)}
           onRefreshFolder={() => void workspace.refreshFolder()}
           onCreateFolder={workspace.createWorkspaceFolder}
+          onCreateFile={workspace.createWorkspaceFile}
           onSearchResult={(id, from, to) => {
             workspace.setActiveDocumentId(id);
             setSearchTarget((previous) => ({ id, from, to, sequence: (previous?.sequence ?? 0) + 1 }));
@@ -575,6 +579,20 @@ function App() {
             { label: "Run: Stop", action: interpreter.stop },
           ]}
         />
+      )}
+
+      {workspace.pendingFolder && (
+        <div className="modal-backdrop" role="presentation" onMouseDown={workspace.cancelOpenFolder}>
+          <div className="rename-dialog folder-open-dialog" role="dialog" aria-modal="true" aria-labelledby="folder-open-title" onMouseDown={(event) => event.stopPropagation()} onKeyDown={(event) => { if (event.key === "Escape") workspace.cancelOpenFolder(); }}>
+            <h2 id="folder-open-title">Open Folder</h2>
+            <p>Open “{workspace.pendingFolder.name}” in this window or a new window?</p>
+            <div className="rename-dialog__actions">
+              <button type="button" onClick={workspace.cancelOpenFolder}>Cancel</button>
+              <button type="button" onClick={() => void workspace.openPendingFolder(true)}>New Window</button>
+              <button type="button" className="folder-open-dialog__primary" autoFocus onClick={() => void workspace.openPendingFolder(false)}>Current Window</button>
+            </div>
+          </div>
+        </div>
       )}
 
       {renameDocument && (

@@ -50,7 +50,7 @@ export function CommandCenter({ mode, documents, commands, indentActions, indent
 
   return (
     <div className="quick-overlay" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-      <div className={`quick-picker${indentMode ? " quick-picker--indent" : ""}`} role="dialog" aria-label="Command center" aria-modal="true">
+      <div className="quick-picker" role="dialog" aria-label="Command center" aria-modal="true">
         <input
           ref={inputRef}
           className="quick-picker__input"
@@ -70,7 +70,6 @@ export function CommandCenter({ mode, documents, commands, indentActions, indent
             else if (event.key === "Enter" && items[currentIndex]) { event.preventDefault(); execute(items[currentIndex].action); }
           }}
         />
-        {!indentMode && <div className="quick-picker__hint">{lineMode ? "Go to line in the active file" : commandMode ? "Commands" : "Open editors · > Commands · : Go to line"}</div>}
         <div className="quick-picker__results" id="quick-results" role="listbox" aria-label={indentMode ? "Indentation options" : lineMode ? "Go to line" : commandMode ? "Commands" : "Open editors"}>
           {items.length ? items.map((item, index) => (
             <button id={`quick-result-${index}`} type="button" role="option" aria-selected={index === currentIndex} key={`${item.label}-${index}`} onMouseEnter={() => setSelected(index)} onClick={() => execute(item.action)}>

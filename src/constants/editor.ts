@@ -6,3 +6,8 @@ if n == 0 or n == 1 then
 else
   return F(n - 1) + F(n - 2)
 endif`;
+
+export const NEW_ALGORITHM_TEMPLATE = `Algorithm: Main()
+Require:
+Return:
+`;

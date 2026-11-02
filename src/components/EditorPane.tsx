@@ -1,8 +1,10 @@
 import { useEffect, useMemo, type ReactNode, type RefObject } from "react";
 import { indentUnit } from "@codemirror/language";
 import { EditorState } from "@codemirror/state";
-import { EditorView } from "@codemirror/view";
+import { oneDarkTheme } from "@codemirror/theme-one-dark";
+import { EditorView, placeholder } from "@codemirror/view";
 import CodeMirror from "@uiw/react-codemirror";
+import { FileText } from "lucide-react";
 import { pseudocodeExtensions } from "../editor/pseudocodeLanguage";
 import {
   isDocumentDirty,
@@ -23,19 +25,6 @@ interface EditorPaneProps {
   onCursorChange: (position: CursorPosition) => void;
 }
 
-function FileIcon() {
-  return (
-    <svg
-      className="file-tab__icon"
-      viewBox="0 0 16 16"
-      aria-hidden="true"
-    >
-      <path d="M3.5 1.5h5l4 4v9h-9z" />
-      <path d="M8.5 1.5v4h4" />
-    </svg>
-  );
-}
-
 export function EditorPane({
   views,
   actions,
@@ -49,7 +38,7 @@ export function EditorPane({
   onCursorChange,
 }: EditorPaneProps) {
   const extensions = useMemo(
-    () => [...pseudocodeExtensions, indentUnit.of(" ".repeat(indentSize)), EditorState.tabSize.of(indentSize)],
+    () => [...pseudocodeExtensions, indentUnit.of(" ".repeat(indentSize)), EditorState.tabSize.of(indentSize), placeholder("Start typing to dismiss")],
     [indentSize],
   );
 
@@ -92,7 +81,7 @@ export function EditorPane({
               }}
               title={document.path ?? document.name}
             >
-              <FileIcon />
+              <FileText className="file-icon" aria-hidden="true" />
               <span className={`file-tab__name${document.path === null ? " file-name--untitled" : ""}`}>{document.name}</span>
               {isDirty && (
                 <span className="file-tab__dirty" aria-label="Unsaved changes">
@@ -118,6 +107,8 @@ export function EditorPane({
       {actions}
       </div>
 
+      {documents.length === 0 && <p className="empty-state">Open or create a file to start editing.</p>}
+
       {documents.map((document) => (
         <div
           className="editor-surface"
@@ -128,7 +119,7 @@ export function EditorPane({
             value={document.content}
             onCreateEditor={(view) => views.current.set(document.id, view)}
             height="100%"
-            theme="dark"
+            theme={oneDarkTheme}
             basicSetup={{
               foldGutter: false,
               highlightActiveLineGutter: true,

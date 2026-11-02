@@ -11,7 +11,7 @@ UNNC AlgoLab 是一款用于学习和练习算法的伪代码编辑器和解释�
 - 支持停止运行，以及递归、条件、循环和部分列表与树操作。
 - 使用 `⌘J`（macOS）或 `Ctrl+J`（Windows）显示或隐藏输出和变量面板。
 
-解释器实现的是项目支持的伪代码语法，并非通用编程语言。可在应用启动时查看内置的 Fibonacci 示例，或参考 [伪代码语法规则](docs/PSEUDOCODE_SYNTAX.md) 和 [解释器测试](tests/interpreter.test.mjs)。
+解释器实现的是项目支持的伪代码语法，并非通用编程语言。可参考下方的 Fibonacci 示例、[伪代码语法规则](docs/PSEUDOCODE_SYNTAX.md) 和 [解释器测试](tests/interpreter.test.mjs)。
 
 ## 环境要求
 
@@ -73,6 +73,21 @@ npm run tauri build
 ```
 
 桌面应用需要在目标平台配置好 Tauri 构建依赖。构建结果位于 `src-tauri/target/` 下。
+
+### Windows 安装器
+
+Windows 使用 NSIS 生成安装程序。安装向导提供安装目录选择；默认仅为当前用户安装。安装界面支持简体中文和英文，并根据系统语言选择。
+
+在 Windows 项目目录中安装依赖后运行：
+
+```powershell
+npm.cmd ci
+npm.cmd run tauri -- build --bundles nsis
+```
+
+安装程序位于 `src-tauri\target\release\bundle\nsis\`。如果通过 `--target aarch64-pc-windows-msvc` 指定 ARM64 目标，输出路径为 `src-tauri\target\aarch64-pc-windows-msvc\release\bundle\nsis\`。Parallels 中的 Windows ARM 虚拟机应使用 ARM64 版本；普通 Intel / AMD Windows 电脑使用 x64 版本。构建需要相应架构的 Rust MSVC 工具链、Visual C++ 生成工具和 Windows SDK。
+
+也可以在 GitHub 的 Actions 页面手动运行 **Build Windows NSIS installer**，完成后从该次运行的 Artifacts 下载对应架构的安装程序。该流程仅构建和上传工作流产物，不会自动发布 Release；工作流需要先提交到仓库。安装器尚未配置代码签名。
 
 ## 技术栈
 

@@ -20,39 +20,55 @@ interface AlgorithmHeader {
 }
 
 const PUNCTUATION_REPLACEMENTS: Record<string, string> = {
-  "（": "(",
-  "）": ")",
-  "：": ":",
-  "；": ";",
-  "，": ",",
-  "。": ".",
-  "！": "!",
-  "【": "[",
-  "】": "]",
-  "‘": "'",
-  "’": "'",
-  "“": '"',
-  "”": '"',
-  "–": "-",
   "←": "=",
   "≤": "<=",
   "≥": ">=",
   "≠": "!=",
 };
 
-function normalizePunctuation(source: string): string {
-  return Array.from(source, (character) => {
-    return PUNCTUATION_REPLACEMENTS[character] ?? character;
-  }).join("");
+function normalizePunctuation(line: string): string {
+  let closingQuote = "";
+  let escaped = false;
+  let normalized = "";
+
+  for (let index = 0; index < line.length; index += 1) {
+    const character = line[index];
+    if (closingQuote) {
+      if (!escaped && character === closingQuote) {
+        normalized += PUNCTUATION_REPLACEMENTS[character] ?? character;
+        closingQuote = "";
+      } else {
+        normalized += character;
+      }
+      escaped = !escaped && character === "\\";
+      continue;
+    }
+    if (character === "#" || (character === "/" && line[index + 1] === "/")) {
+      return normalized + line.slice(index);
+    }
+    if (character === '"' || character === "'") {
+      closingQuote = character;
+      escaped = false;
+    }
+    normalized += PUNCTUATION_REPLACEMENTS[character] ?? character;
+  }
+  return normalized;
 }
 
 function removeComment(line: string): string {
   let quote = "";
+  let escaped = false;
 
   for (let index = 0; index < line.length; index += 1) {
     const character = line[index];
-    if ((character === '"' || character === "'") && line[index - 1] !== "\\") {
-      quote = quote === character ? "" : quote ? quote : character;
+    if (quote) {
+      if (character === quote && !escaped) quote = "";
+      escaped = character === "\\" && !escaped;
+      continue;
+    }
+    if (character === '"' || character === "'") {
+      quote = character;
+      escaped = false;
       continue;
     }
     if (!quote && character === "#") {
@@ -67,12 +83,12 @@ function removeComment(line: string): string {
 }
 
 function prepareLines(source: string): SourceLine[] {
-  return normalizePunctuation(source)
+  return source
     .split(/\r?\n/)
     .map((rawLine, index) => {
-      const withoutComment = removeComment(rawLine);
+      const withoutComment = removeComment(normalizePunctuation(rawLine));
       const numberPrefix = withoutComment.match(
-        /^\s*\d+\s*[:.,·]?\s*/,
+        /^\s*\d+\s*[:.,]?\s*/,
       );
       const afterNumber = numberPrefix
         ? withoutComment.slice(numberPrefix[0].length)

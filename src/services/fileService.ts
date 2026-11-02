@@ -48,6 +48,10 @@ export async function createFolder(parent: string, name: string): Promise<void> 
   await invoke("create_folder", { parent, name });
 }
 
+export async function createAlgoFile(parent: string, name: string, content: string): Promise<string> {
+  return invoke<string>("create_algo_file", { parent, name, content });
+}
+
 export async function selectAndReadFiles(): Promise<OpenedFile[]> {
   const selection = await open({
     multiple: true,
@@ -129,6 +133,18 @@ export async function confirmCloseAllEditors(
     title: "UNNC AlgoLab",
     kind: "warning",
     okLabel: "Close Without Saving",
+    cancelLabel: "Cancel",
+  });
+}
+
+export async function confirmSwitchFolder(unsavedFileCount: number): Promise<boolean> {
+  const description = unsavedFileCount === 1
+    ? "There is 1 file with unsaved changes. Open the folder and discard those changes?"
+    : `There are ${unsavedFileCount} files with unsaved changes. Open the folder and discard those changes?`;
+  return confirm(description, {
+    title: "Open Folder",
+    kind: "warning",
+    okLabel: "Discard and Open",
     cancelLabel: "Cancel",
   });
 }
