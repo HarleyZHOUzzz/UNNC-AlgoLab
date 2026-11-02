@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { CSSProperties, PointerEvent as ReactPointerEvent, KeyboardEvent as ReactKeyboardEvent } from "react";
 import { isTauri } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
@@ -99,6 +100,46 @@ function App() {
   const [runConfiguration, setRunConfiguration] =
     useState<RunConfiguration | null>(null);
   const [isInspectorVisible, setIsInspectorVisible] = useState(true);
+  const [sidebarWidth, setSidebarWidth] = useState(220);
+  const [inspectorWidth, setInspectorWidth] = useState(320);
+  const workbenchRef = useRef<HTMLDivElement>(null);
+
+  const resizePanel = (panel: "sidebar" | "inspector", delta: number) => {
+    const workbench = workbenchRef.current;
+    if (!workbench) return;
+    const sidebar = workbench.querySelector(".sidebar")?.getBoundingClientRect().width ?? 0;
+    const inspector = workbench.querySelector(".inspector")?.getBoundingClientRect().width ?? 0;
+    const available = workbench.clientWidth - sidebar - inspector - 220;
+    if (panel === "sidebar") {
+      setSidebarWidth((width) => Math.max(140, Math.min(width + delta, width + Math.max(0, available))));
+    } else {
+      setInspectorWidth((width) => Math.max(200, Math.min(width - delta, width + Math.max(0, available))));
+    }
+  };
+
+  const startResize = (event: ReactPointerEvent<HTMLDivElement>, panel: "sidebar" | "inspector") => {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    let lastX = event.clientX;
+    const handle = event.currentTarget;
+    const move = (next: PointerEvent) => {
+      resizePanel(panel, next.clientX - lastX);
+      lastX = next.clientX;
+    };
+    const finish = () => {
+      handle.removeEventListener("pointermove", move);
+      handle.removeEventListener("lostpointercapture", finish);
+    };
+    handle.addEventListener("pointermove", move);
+    handle.addEventListener("lostpointercapture", finish);
+  };
+
+  const resizeWithKeyboard = (event: ReactKeyboardEvent<HTMLDivElement>, panel: "sidebar" | "inspector") => {
+    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+    event.preventDefault();
+    resizePanel(panel, event.key === "ArrowLeft" ? -10 : 10);
+  };
   const cursorPositionsRef = useRef<Record<string, CursorPosition>>({});
   const documentsRef = useRef(workspace.documents);
   const editorViews = useRef(new Map<string, EditorView>());
@@ -480,7 +521,7 @@ function App() {
         onRequestClose={() => void requestQuit()}
       />
 
-      <div className="workbench">
+      <div className="workbench" ref={workbenchRef} style={{ "--sidebar-width": `${sidebarWidth}px`, "--inspector-width": `${inspectorWidth}px` } as CSSProperties}>
         <Sidebar
           documents={workspace.documents}
           activeDocumentId={workspace.activeDocumentId}
@@ -497,6 +538,7 @@ function App() {
             setSearchTarget((previous) => ({ id, from, to, sequence: (previous?.sequence ?? 0) + 1 }));
           }}
         />
+      <div className="panel-resizer panel-resizer--sidebar" role="separator" aria-label="Resize sidebar" aria-orientation="vertical" tabIndex={0} onPointerDown={(event) => startResize(event, "sidebar")} onKeyDown={(event) => resizeWithKeyboard(event, "sidebar")} />
       <main
         className={`workspace${
           isInspectorVisible ? "" : " workspace--inspector-hidden"
@@ -529,7 +571,10 @@ function App() {
           }}
         />
         {isInspectorVisible && (
+          <>
+          <div className="panel-resizer" role="separator" aria-label="Resize output and variables" aria-orientation="vertical" tabIndex={0} onPointerDown={(event) => startResize(event, "inspector")} onKeyDown={(event) => resizeWithKeyboard(event, "inspector")} />
           <InspectorPanel output={output} variables={variables} problems={problems} selectedTab={inspectorTab} onSelectTab={setInspectorTab} onRevealProblem={revealProblem} />
+          </>
         )}
       </main>
       </div>
