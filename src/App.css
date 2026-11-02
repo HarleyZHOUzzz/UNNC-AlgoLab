@@ -1407,22 +1407,21 @@ button {
   background: #37373d;
 }
 .editor-surface .cm-gutters {
-  border-color: #2b2b2b;
   min-width: 0;
-  border-right: 0;
-  color: #858585;
-  background: var(--editor-background);
+  border-right: 1px solid #323438;
+  color: #4b5059;
+  background: #191a1d;
 }
 
 .editor-surface .cm-lineNumbers .cm-gutterElement {
-  min-width: 38px;
-  padding: 0 14px 0 10px;
+  min-width: 72px;
+  padding: 0 40px 0 6px;
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
 
 .editor-surface .cm-lineNumbers .cm-activeLineGutter {
-  color: #c6c6c6;
+  color: #a5adb9;
   background: transparent;
 }
 
