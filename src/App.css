@@ -1409,7 +1409,7 @@ button {
 }
 
 .editor-surface .cm-content {
-  padding: 6px 0 40px;
+  padding: 6px 24px 40px 0;
   caret-color: #ffffff;
 }
 
