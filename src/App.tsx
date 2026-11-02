@@ -106,36 +106,49 @@ function App() {
   const [isResizing, setIsResizing] = useState(false);
   const workbenchRef = useRef<HTMLDivElement>(null);
 
-  const resizePanel = (panel: "sidebar" | "inspector", delta: number) => {
+  const resizePanel = (panel: "sidebar" | "inspector", delta: number, initial?: { width: number; available: number }) => {
     const workbench = workbenchRef.current;
     if (!workbench) return;
     const sidebar = workbench.querySelector(".sidebar")?.getBoundingClientRect().width ?? 0;
     const inspector = workbench.querySelector(".inspector-container")?.getBoundingClientRect().width ?? 0;
-    const available = workbench.clientWidth - sidebar - inspector - 220;
+    const available = initial?.available ?? Math.max(0, workbench.clientWidth - sidebar - inspector - 230);
     if (panel === "sidebar") {
-      const width = workbench.querySelector(".sidebar-panel")?.getBoundingClientRect().width ?? sidebarWidth;
+      const width = initial?.width ?? workbench.querySelector(".sidebar-panel")?.getBoundingClientRect().width ?? sidebarWidth;
       if (width + delta <= 180) {
         setIsResizing(false);
         setSidebarView(null);
-      } else setSidebarWidth(Math.min(width + delta, width + Math.max(0, available)));
+        return true;
+      } else setSidebarWidth(Math.min(width + delta, width + available));
     } else {
-      if (inspector - delta <= 220) {
+      const width = initial?.width ?? inspector;
+      if (width - delta <= 220) {
         setIsResizing(false);
         setIsInspectorVisible(false);
-      } else setInspectorWidth(Math.min(inspector - delta, inspector + Math.max(0, available)));
+        return true;
+      } else setInspectorWidth(Math.min(width - delta, width + available));
     }
+    return false;
   };
 
   const startResize = (event: ReactPointerEvent<HTMLDivElement>, panel: "sidebar" | "inspector") => {
     if (event.button !== 0) return;
     event.preventDefault();
+    const workbench = workbenchRef.current;
+    if (!workbench) return;
+    const sidebar = workbench.querySelector(".sidebar")?.getBoundingClientRect().width ?? 0;
+    const inspector = workbench.querySelector(".inspector-container")?.getBoundingClientRect().width ?? 0;
+    const width = panel === "sidebar"
+      ? workbench.querySelector(".sidebar-panel")?.getBoundingClientRect().width ?? sidebarWidth
+      : inspector;
+    const initial = { width, available: Math.max(0, workbench.clientWidth - sidebar - inspector - 230) };
     setIsResizing(true);
     event.currentTarget.setPointerCapture(event.pointerId);
-    let lastX = event.clientX;
+    const startX = event.clientX;
     const handle = event.currentTarget;
     const move = (next: PointerEvent) => {
-      resizePanel(panel, next.clientX - lastX);
-      lastX = next.clientX;
+      if (resizePanel(panel, next.clientX - startX, initial) && handle.hasPointerCapture(next.pointerId)) {
+        handle.releasePointerCapture(next.pointerId);
+      }
     };
     const finish = () => {
       setIsResizing(false);
