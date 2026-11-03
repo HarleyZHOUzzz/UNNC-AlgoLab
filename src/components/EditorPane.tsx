@@ -94,6 +94,7 @@ export function EditorPane({
               className={`file-tab${isActive ? " file-tab--active" : ""}${draggedTab === document.id ? " file-tab--dragging" : ""}`}
               role="tab"
               aria-selected={isActive}
+              aria-label={document.name}
               tabIndex={isActive ? 0 : -1}
               key={document.id}
               draggable
@@ -121,7 +122,7 @@ export function EditorPane({
             >
               {dropTarget?.id === document.id && <span className={`file-tab__drop-marker file-tab__drop-marker--${dropTarget.side}`} aria-hidden="true" />}
               <FileText className="file-icon" aria-hidden="true" />
-              <span className={`file-tab__name${document.path === null ? " file-name--untitled" : ""}`}>{document.name}</span>
+              <span className={`file-tab__name${document.path === null ? " file-name--untitled" : ""}`}>{document.name.replace(/^(.+)\.[^.]+$/, "$1")}</span>
               {isDirty && (
                 <span className="file-tab__dirty" aria-label="Unsaved changes">
                   ●
