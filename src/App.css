@@ -2070,6 +2070,20 @@ button {
 .settings-menu button:hover,
 .settings-menu button:focus-visible { background: #094771; color: #ffffff; outline: none; }
 .about-dialog p { margin: 0; color: #cccccc; font-size: 13px; }
+.about-dialog .rename-dialog__actions { margin-top: 24px; }
+.about-dialog .rename-dialog__actions button {
+  min-width: 84px;
+  height: 30px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: #0e639c;
+  color: #ffffff;
+  font: inherit;
+  font-size: 12px;
+  transition: background-color 120ms ease;
+}
+.about-dialog .rename-dialog__actions button:hover { background: #1177bb; }
+.about-dialog .rename-dialog__actions button:focus-visible { outline: 1px solid #9ccfff; outline-offset: 2px; }
 
 .activity-button {
   padding: 0;
