@@ -90,6 +90,9 @@ const pseudocodeParser: StreamParser<PseudocodeState> = {
       state.depth += 1;
       return "controlKeyword";
     }
+    if (isLineStart && stream.match(/(?:Requires?|Returns?)\b(?=\s*:)/i)) {
+      return "keyword";
+    }
     if (stream.match(/(?:then|do|return|and|or|not|mod)\b/i)) {
       return "controlKeyword";
     }

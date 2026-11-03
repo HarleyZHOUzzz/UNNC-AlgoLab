@@ -80,6 +80,21 @@ test("distinguishes declarations, control keywords, functions, and variables", (
   assert.notEqual(highlightingFor(state, tokens.get("Double")), highlightingFor(state, tokens.get("n")));
 });
 
+test("highlights Return metadata like Require while keeping return statements distinct", () => {
+  const doc = "Algorithm: Main()\nRequire: a number\nReturn: a number\nreturn 1";
+  const state = EditorState.create({ doc, extensions: pseudocodeExtensions });
+  const cursor = syntaxTree(state).cursor();
+  const tokens = new Map();
+  do {
+    const style = getStyleTags(cursor.node);
+    if (style) tokens.set(doc.slice(cursor.from, cursor.to), style.tags);
+  } while (cursor.next());
+  assert.ok(tokens.get("Require").includes(tags.keyword));
+  assert.ok(tokens.get("Return").includes(tags.keyword));
+  assert.ok(tokens.get("return").includes(tags.controlKeyword));
+  assert.equal(highlightingFor(state, tokens.get("Return")), highlightingFor(state, tokens.get("Require")));
+});
+
 test("executes recursive factorial", () => {
   const source = `Algorithm: factorial(n)
 Requires: an integer n
