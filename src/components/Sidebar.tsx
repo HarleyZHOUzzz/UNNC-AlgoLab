@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import type { FolderEntry, OpenedFolder } from "../services/fileService";
 import { isDocumentDirty, type EditorDocument } from "../types/editor";
+import { SettingsMenu } from "./SettingsMenu";
 
 export type SidebarView = "files" | "search";
 
@@ -133,6 +134,7 @@ export function Sidebar({ view, onViewChange, documents, activeDocumentId, folde
         <button type="button" className={view === "search" ? "activity-button activity-button--active" : "activity-button"} aria-label="Search open files" aria-pressed={view === "search"} title="Search open files" onClick={() => toggle("search")}>
           <span className="codicon codicon-search" aria-hidden="true" />
         </button>
+        <SettingsMenu />
       </nav>
       <div className="sidebar-panel-clip" aria-hidden={!view} inert={!view}>
       <div className="sidebar-panel">
