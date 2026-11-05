@@ -116,6 +116,23 @@ npm.cmd run tauri -- build --bundles nsis
 
 也可以在 GitHub 的 Actions 页面手动运行 **Build Windows NSIS installer**，完成后从该次运行的 Artifacts 下载对应架构的安装程序。该流程仅构建和上传工作流产物，不会自动发布 Release；工作流需要先提交到仓库。安装器尚未配置代码签名。
 
+### Microsoft Store MSIX
+
+商店包需要先在 Partner Center 创建应用并获取 **Package/Identity name** 和完整的 **Publisher**（`CN=...`）。这两项必须与商店中的应用身份完全一致，不要用显示名称或自签名证书的名称代替。商店包使用四段数字版本：第一段不能为 0，第四段必须为 0，例如 `1.1.11.0`；它与软件显示的 `0.1.0-beta` 是分别管理的版本。
+
+在 GitHub Actions 手动运行 **Build Windows Store MSIX**，输入包名、Publisher 和数字版本。工作流分别在 Windows x64 和 ARM64 构建应用、使用 Windows SDK 的 MakeAppx 创建 MSIX，并将两个包作为工作流产物保存。它不会自动提交到 Microsoft Store，也不会发布到官网。
+
+也可以在安装了 Node.js、Rust、Python 和 Windows SDK 的 Windows 电脑上，先使用 `npm.cmd ci` 安装依赖，再构建对应的应用：
+
+```powershell
+npm.cmd run tauri -- build --no-bundle --target aarch64-pc-windows-msvc
+python scripts/package_msix.py --package-name '<Partner Center 包名>' --publisher '<Partner Center 的完整 Publisher>' --version '1.1.11.0' --arch arm64 --exe 'src-tauri/target/aarch64-pc-windows-msvc/release/unnc-algolab.exe' --output 'store-packages/UNNC-AlgoLab-arm64.msix'
+```
+
+x64 版本使用目标 `x86_64-pc-windows-msvc`、`--arch x64` 和对应目录。脚本会验证架构及商店版本格式；若 SDK 工具无法自动找到，可用 `--makeappx` 指定路径。`store-packages/` 是构建输出，不应提交到代码仓库。
+
+这些包用于 **Partner Center 商店提交**，脚本不会自签名或将证书加入系统信任。商店会在应用通过认证后签署分发包；本地直接安装需要单独使用受测试设备信任的证书签名。包声明 `runFullTrust`，提交时需接受商店审核；WebView2 Runtime 及应用的文件、窗口功能仍需在干净 Windows 设备上验证。当前 Defender 对旧 NSIS 安装器的检测也应继续向微软核查，不能假定 MSIX 会解决该检测。
+
 ## 技术栈
 
 - [Tauri 2](https://v2.tauri.app/) 和 Rust

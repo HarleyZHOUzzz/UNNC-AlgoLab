@@ -1,0 +1,73 @@
+name: Build Windows Store MSIX
+
+on:
+  workflow_dispatch:
+    inputs:
+      package_name:
+        description: Package/Identity name from Partner Center
+        required: true
+        type: string
+      publisher:
+        description: Full Publisher value from Partner Center (CN=...)
+        required: true
+        type: string
+      package_version:
+        description: Store version (first number nonzero, fourth number 0)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    name: Store MSIX ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            runner: windows-latest
+            target: x86_64-pc-windows-msvc
+          - arch: arm64
+            runner: windows-11-arm
+            target: aarch64-pc-windows-msvc
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - run: npm ci
+      - run: npm run test:interpreter
+      - run: python -m unittest discover -s tests -p 'test_msix.py'
+      - run: npm run tauri -- build --no-bundle --target ${{ matrix.target }}
+      - name: Create Store submission package
+        env:
+          PACKAGE_NAME: ${{ inputs.package_name }}
+          PACKAGE_PUBLISHER: ${{ inputs.publisher }}
+          PACKAGE_VERSION: ${{ inputs.package_version }}
+          PACKAGE_ARCH: ${{ matrix.arch }}
+          RUST_TARGET: ${{ matrix.target }}
+        shell: pwsh
+        run: |
+          python scripts/package_msix.py `
+            --package-name "$env:PACKAGE_NAME" `
+            --publisher "$env:PACKAGE_PUBLISHER" `
+            --version "$env:PACKAGE_VERSION" `
+            --arch "$env:PACKAGE_ARCH" `
+            --exe "src-tauri/target/$env:RUST_TARGET/release/unnc-algolab.exe" `
+            --output "store-packages/UNNC-AlgoLab-$env:PACKAGE_ARCH.msix"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: UNNC-AlgoLab-Store-${{ matrix.arch }}
+          path: store-packages/*.msix
+          if-no-files-found: error
